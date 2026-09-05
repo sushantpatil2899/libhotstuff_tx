@@ -5,9 +5,21 @@ via Fabric (or runs locally for config generation). Centralising them
 here keeps remote.py focused on orchestration rather than escaping
 quirks.
 """
+import shlex
 from os.path import join
 
 from benchmark.utils import PathMaker
+
+
+def _q(path):
+    """shlex.quote() every filesystem path before it lands in an f-string
+    shell command. Remote repo paths are on Linux home dirs and rarely
+    have spaces, but the *local* orchestrator path (used by gen_conf,
+    now that it runs from a developer's own laptop rather than a
+    dedicated CloudLab node) is a real checkout path that can — e.g.
+    this project's own "Advance Project" directory breaks every one of
+    these commands without this."""
+    return shlex.quote(str(path))
 
 
 class CommandMaker:
@@ -42,7 +54,8 @@ class CommandMaker:
         assert isinstance(repo_url, str)
         assert isinstance(repo_name, str)
         return (
-            f'(test -d {repo_name}/.git || git clone {repo_url} {repo_name})'
+            f'(test -d {_q(repo_name)}/.git || '
+            f'git clone {_q(repo_url)} {_q(repo_name)})'
         )
 
     @staticmethod
@@ -50,7 +63,7 @@ class CommandMaker:
         """Initialise + update all submodules (secp256k1, salticidae, minirun)."""
         assert isinstance(repo_name, str)
         return (
-            f'(cd {repo_name} && git submodule update --init --recursive)'
+            f'(cd {_q(repo_name)} && git submodule update --init --recursive)'
         )
 
     @staticmethod
@@ -60,9 +73,9 @@ class CommandMaker:
         assert isinstance(repo_name, str)
         assert isinstance(branch, str)
         return (
-            f'(cd {repo_name} && git fetch -f && '
-            f'git checkout -f {branch} -- && '
-            f'git reset --hard origin/{branch} && '
+            f'(cd {_q(repo_name)} && git fetch -f && '
+            f'git checkout -f {_q(branch)} -- && '
+            f'git reset --hard origin/{_q(branch)} && '
             f'git submodule update --init --recursive)'
         )
 
@@ -100,7 +113,7 @@ class CommandMaker:
             cxx_extra.append('-DHOTSTUFF_ENABLE_BENCHMARK')
         flags.append(f'"-DCMAKE_CXX_FLAGS={" ".join(cxx_extra)}"')
         flag_str = ' '.join(flags)
-        return f'(cd {repo_name} && cmake {flag_str} .)'
+        return f'(cd {_q(repo_name)} && cmake {flag_str} .)'
 
     @staticmethod
     def make(repo_name, jobs=None):
@@ -108,7 +121,7 @@ class CommandMaker:
         hotstuff-tls-keygen)."""
         assert isinstance(repo_name, str)
         j = f' -j{int(jobs)}' if jobs else ''
-        return f'(cd {repo_name} && make{j})'
+        return f'(cd {_q(repo_name)} && make{j})'
 
     # ---------- Per-run config generation (local on orchestrator) ----------
 
@@ -133,13 +146,13 @@ class CommandMaker:
         so no extra CLI flag is needed at launch time on either side.
         """
         return (
-            f'python3 {join(repo_name, "scripts", "gen_conf.py")} '
-            f'--prefix {prefix} '
-            f'--ips {ips_file} '
-            f'--keygen {join(repo_name, "hotstuff-keygen")} '
-            f'--tls-keygen {join(repo_name, "hotstuff-tls-keygen")} '
+            f'python3 {_q(join(repo_name, "scripts", "gen_conf.py"))} '
+            f'--prefix {_q(prefix)} '
+            f'--ips {_q(ips_file)} '
+            f'--keygen {_q(join(repo_name, "hotstuff-keygen"))} '
+            f'--tls-keygen {_q(join(repo_name, "hotstuff-tls-keygen"))} '
             f'--block-size {int(block_size)} '
-            f'--pace-maker {pace_maker} '
+            f'--pace-maker {_q(pace_maker)} '
             f'--nworker {int(nworker)} '
             f'--repnworker {int(repnworker)} '
             f'--clinworker {int(clinworker)} '
@@ -174,6 +187,12 @@ class CommandMaker:
             extra += f' --max-rep-msg {int(max_rep_msg)}'
         if max_cli_msg is not None:
             extra += f' --max-cli-msg {int(max_cli_msg)}'
+        # Not using _q() here: this whole command is already wrapped in
+        # bash -lc '...' (single quotes), and shlex.quote()'s own
+        # single-quote escaping would break that outer nesting. Remote
+        # paths are Linux $HOME-relative and don't get spaces in
+        # practice, unlike the local orchestrator path gen_conf() above
+        # has to handle.
         bin_path = join(repo_dir, 'examples', 'hotstuff-app')
         return (
             f"bash -lc 'ulimit -s unlimited && "

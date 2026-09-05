@@ -97,6 +97,30 @@ rises, the earlier plateau was client-bound, not system saturation.
 Keep raising `num_clients` until it stops helping — that point is your
 real system ceiling, independent of client capacity.
 
+## Local build (this laptop, macOS)
+
+The orchestrator only needs `hotstuff-keygen`/`hotstuff-tls-keygen`
+locally (for `gen_conf.py`) — `hotstuff-app`/`hotstuff-client` build
+and run on the remote CloudLab nodes via `fab install-cloudlab`, not
+here. Two macOS-only snags, already worked around in this checkout:
+
+1. Homebrew keeps `openssl@3` and `libuv` out of the default include
+   path. Export before configuring:
+   ```bash
+   export CPATH="$(pwd)/../.macos_compat:/opt/homebrew/opt/openssl@3/include:/opt/homebrew/opt/libuv/include"
+   export LIBRARY_PATH="/opt/homebrew/opt/openssl@3/lib:/opt/homebrew/opt/libuv/lib"
+   ```
+2. `src/hotstuff_keygen.cpp`/`hotstuff_tls_keygen.cpp` use GNU
+   `<error.h>`, which doesn't exist on macOS libc. `.macos_compat/error.h`
+   (repo root, gitignored — never touches the tracked source, never
+   seen by the Linux CloudLab build) shims the one function actually
+   called. `CPATH` above must include that directory.
+
+Then from the repo root: `cmake -DCMAKE_BUILD_TYPE=Release . && make
+hotstuff-keygen hotstuff-tls-keygen`. Verified working (both binaries
+run and the full `gen_conf.py` → `hotstuff.conf` + 4×`hotstuff-sec*.conf`
+path was smoke-tested against `manifest.xml`'s real replica IPs).
+
 ## Notes carried over from the old harness
 
 - **FD leak**: Fabric hit `[Errno 24] Too many open files` after ~100
