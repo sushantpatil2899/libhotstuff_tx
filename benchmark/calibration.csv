@@ -1,0 +1,9 @@
+run_id,nodes,num_clients,iter_count,max_async,duration,collocate_client,block_size,pace_maker,nworker,repnworker,clinworker,repburst,cliburst,sb_users,sb_prob_choose_mtx,sb_skew_factor
+CAL_default_ma100,4,1,-1,100,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+CAL_default_ma400,4,1,-1,400,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+CAL_default_ma900,4,1,-1,900,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+CAL_default_ma1300,4,1,-1,1300,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+CAL_scaled_ma100,4,1,-1,100,60,false,200,dummy,16,8,16,1000,1000,1000,0.9,0.1
+CAL_scaled_ma400,4,1,-1,400,60,false,200,dummy,16,8,16,1000,1000,1000,0.9,0.1
+CAL_scaled_ma900,4,1,-1,900,60,false,200,dummy,16,8,16,1000,1000,1000,0.9,0.1
+CAL_scaled_ma1300,4,1,-1,1300,60,false,200,dummy,16,8,16,1000,1000,1000,0.9,0.1

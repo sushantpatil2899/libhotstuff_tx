@@ -1,0 +1,9 @@
+logs/
+results/
+__pycache__/
+*.pyc
+*.lock
+.hotstuff-sec*.conf
+hotstuff.gen*.conf
+hotstuff.gen-sec*.conf
+nodes.txt

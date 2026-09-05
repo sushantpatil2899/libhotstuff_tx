@@ -1,0 +1,11 @@
+{
+    "cloudlab": {
+        "username": "sush99"
+    },
+    "port": 10000,
+    "repo": {
+        "name": "libhotstuff_tx",
+        "url": "https://github.com/sushantpatil2899/libhotstuff_tx.git",
+        "branch": "master"
+    }
+}

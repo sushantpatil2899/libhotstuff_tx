@@ -1,0 +1,8 @@
+{
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_user": "your_gmail@gmail.com",
+    "smtp_password": "your_app_password",
+    "to_address": "your_gmail@gmail.com",
+    "throttle_seconds": 600
+}
