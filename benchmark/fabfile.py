@@ -8,6 +8,7 @@ All tasks expect:
     can reach every node without prompting.
 """
 from fabric import task
+from fabric.exceptions import GroupException
 
 from benchmark.remote import CloudLabBench
 from benchmark.utils import BenchError, Print
@@ -100,7 +101,9 @@ def kill(ctx):
     """Stop every libhotstuff process on every node (tmux kill-server)."""
     try:
         CloudLabBench(ctx).kill()
-    except BenchError as e:
+    except (BenchError, GroupException) as e:
+        # kill() is retry-decorated now; GroupException surfaces raw if
+        # every retry attempt is exhausted, rather than as a BenchError.
         Print.error(e)
 
 

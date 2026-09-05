@@ -245,19 +245,30 @@ class CloudLabBench:
             e = FabricError(e) if isinstance(e, GroupException) else e
             raise BenchError('Failed to install libhotstuff', e)
 
+    @retry_on_ssh_error()
     def kill(self, hosts=None, delete_logs=False):
-        """Tmux-kill on every host (or the subset given)."""
+        """Tmux-kill on every host (or the subset given).
+
+        Decorated with the same retry as _run_single/_download_logs —
+        this was previously the one SSH-flaky operation in the row loop
+        that caught GroupException and immediately rewrapped it as
+        BenchError, which meant a transient blip here (observed in
+        practice: "Error reading SSH protocol banner" during a 96-row
+        sweep) killed the whole `fab experiment-cloudlab` run instead of
+        retrying, even though _run_single itself is retry-decorated —
+        because by the time the exception reached that outer decorator
+        it was no longer a TRANSIENT_EXCEPTIONS type. Letting the raw
+        GroupException propagate here (instead of converting it inline)
+        is what makes this decorator's retry actually take effect.
+        """
         hosts = hosts if hosts is not None else self.manager.ssh_hosts()
         pieces = [
             CommandMaker.clean_logs() if delete_logs else 'true',
             f'({CommandMaker.kill()} || true)',
         ]
         cmd = ' && '.join(pieces)
-        try:
-            g = Group(*hosts, user=self.user)
-            g.run(cmd, hide=True)
-        except GroupException as e:
-            raise BenchError('Failed to kill nodes', FabricError(e))
+        g = Group(*hosts, user=self.user)
+        g.run(cmd, hide=True)
 
     # ------------------------------------------------------------------
     # Per-run pipeline
