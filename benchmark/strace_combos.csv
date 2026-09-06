@@ -1,0 +1,6 @@
+run_id,nodes,num_clients,iter_count,max_async,duration,collocate_client,block_size,pace_maker,nworker,repnworker,clinworker,repburst,cliburst,sb_users,sb_prob_choose_mtx,sb_skew_factor
+STRACE_bs100_ma100,4,1,-1,100,150,false,100,dummy,4,4,4,1000,1000,1000,0.9,0.1
+STRACE_bs3200_ma100,4,1,-1,100,150,false,3200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+STRACE_bs100_ma8000,4,1,-1,8000,150,false,100,dummy,4,4,4,1000,1000,1000,0.9,0.1
+STRACE_bs3200_ma8000,4,1,-1,8000,150,false,3200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+STRACE_bs200_ma600,4,1,-1,600,150,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
