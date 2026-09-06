@@ -1,0 +1,10 @@
+run_id,nodes,num_clients,iter_count,max_async,duration,collocate_client,block_size,pace_maker,nworker,repnworker,clinworker,repburst,cliburst,sb_users,sb_prob_choose_mtx,sb_skew_factor
+REFRESH_bs200_ma10_r1,4,1,-1,10,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+REFRESH_bs200_ma10_r2,4,1,-1,10,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+REFRESH_bs200_ma10_r3,4,1,-1,10,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+REFRESH_bs200_ma400_r1,4,1,-1,400,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+REFRESH_bs200_ma400_r2,4,1,-1,400,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+REFRESH_bs200_ma400_r3,4,1,-1,400,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+REFRESH_bs200_ma1300_r1,4,1,-1,1300,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+REFRESH_bs200_ma1300_r2,4,1,-1,1300,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
+REFRESH_bs200_ma1300_r3,4,1,-1,1300,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1
