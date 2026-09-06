@@ -52,13 +52,15 @@ from paramiko.ssh_exception import SSHException
 
 from benchmark.commands import CommandMaker
 from benchmark.config import (
-    BenchParameters, ProtocolParameters, ConfigError, write_ips_file,
+    BenchParameters, ProtocolParameters, NetworkParameters, ConfigError,
+    write_ips_file,
 )
 from benchmark.csv_writer import append_row as _csv_append_row
 from benchmark.instance import CloudLabInstanceManager
 from benchmark.notifier import EmailNotifier
 from benchmark.retry import retry_on_ssh_error
 from benchmark.utils import BenchError, PathMaker, Print, progress_bar
+from benchmark import netem
 
 
 class FabricError(Exception):
@@ -394,13 +396,66 @@ class CloudLabBench:
                 c.run(f'{CommandMaker.cleanup()} || true', hide=True)
                 c.put(main_conf, PathMaker.main_conf_file())
 
+    def _clear_netem(self, replica_pairs):
+        """Tear down any tc qdisc on every replica host. Safe no-op if
+        nothing was set up (teardown_command swallows the "no such
+        qdisc" error). Called unconditionally at the start of every
+        row's netem handling -- self-healing against a prior row that
+        crashed before its own teardown ran, so a stale rule can never
+        silently contaminate a later (possibly zero-latency) row.
+        """
+        if len(replica_pairs) < 2:
+            return
+        for i, (ssh_host, my_ip) in enumerate(replica_pairs):
+            peer_ip = next(ip for j, (_, ip) in enumerate(replica_pairs) if j != i)
+            try:
+                iface = netem.discover_iface(ssh_host, self.user, peer_ip)
+            except netem.NetemError as e:
+                Print.warn(f'_clear_netem: {e}; skipping {ssh_host}')
+                continue
+            c = self._conn(ssh_host)
+            c.run(netem.teardown_command(iface), hide=True)
+
+    def _apply_netem(self, replica_pairs, network):
+        """Clear any prior tc state, then set up per-peer delay on each
+        replica host per `network` (no-op beyond the clear if the row
+        has no nonzero lat_node* values)."""
+        self._clear_netem(replica_pairs)
+        if not network.any_latency:
+            return
+        pairwise = netem.compute_pairwise_delays(network.node_latencies)
+        ip_by_idx = {i: ip for i, (_, ip) in enumerate(replica_pairs)}
+        for i, (ssh_host, _my_ip) in enumerate(replica_pairs):
+            peer_ips = {j: ip for j, ip in ip_by_idx.items() if j != i}
+            iface = netem.discover_iface(ssh_host, self.user, next(iter(peer_ips.values())))
+            cmds = netem.setup_commands(i, peer_ips, pairwise, iface)
+            if not cmds:
+                continue
+            c = self._conn(ssh_host)
+            for cmd in cmds:
+                c.run(cmd, hide=True)
+
+    def clear_netem(self, nodes=4):
+        """Standalone entry point (see fabfile.py's `clear-netem` task):
+        tear down tc on the first `nodes` manifest hosts, independent of
+        any CSV row. The self-healing clear at the start of every row
+        handles the common case; this is the manual escape hatch for
+        when a sweep died mid-run with a nonzero-latency row active and
+        you want the machines back to a clean state right now."""
+        ssh = self.manager.ssh_hosts()
+        priv = self.manager.hosts()
+        proto = ssh if self.manager.manifest.multi_site else priv
+        replica_pairs = list(zip(ssh[:nodes], proto[:nodes]))
+        self._clear_netem(replica_pairs)
+
     @retry_on_ssh_error()
-    def _run_single(self, replica_pairs, client_pairs, bench, protocol):
+    def _run_single(self, replica_pairs, client_pairs, bench, protocol, network):
         """Boot replicas, boot clients, sleep duration, kill everything."""
         self._reset_pool()  # fresh connections for this run
 
         all_hosts = sorted({h for h, _ in replica_pairs + client_pairs})
         self.kill(hosts=all_hosts, delete_logs=True)
+        self._apply_netem(replica_pairs, network)
 
         repo = self.settings.repo_name
 
@@ -591,6 +646,7 @@ class CloudLabBench:
                 try:
                     bench = BenchParameters(self._row_to_bench(row))
                     protocol = ProtocolParameters(self._row_to_protocol(row))
+                    network = NetworkParameters(self._row_to_network(row))
                 except ConfigError as e:
                     Print.error(BenchError(f'PARAM_ERROR for {run_id}', e))
                     self._write_row(
@@ -630,7 +686,7 @@ class CloudLabBench:
 
                 try:
                     self._run_single(
-                        replica_pairs, client_pairs, bench, protocol,
+                        replica_pairs, client_pairs, bench, protocol, network,
                     )
                     self._download_logs(replica_pairs, client_pairs, bench)
                     self._archive_logs(run_log_dir)
@@ -753,7 +809,14 @@ class CloudLabBench:
         """
         keys = ('block_size', 'pace_maker', 'nworker', 'repnworker',
                 'clinworker', 'repburst', 'cliburst', 'max_rep_msg',
-                'max_cli_msg', 'pport', 'cport')
+                'max_cli_msg', 'pport', 'cport',
+                'sb_users', 'sb_prob_choose_mtx', 'sb_skew_factor')
+        return {k: row[k] for k in keys if k in row and row[k] != ''}
+
+    @staticmethod
+    def _row_to_network(row: dict) -> dict:
+        """Pluck the NetworkParameters (per-replica tc latency) fields."""
+        keys = ('lat_node0', 'lat_node1', 'lat_node2', 'lat_node3')
         return {k: row[k] for k in keys if k in row and row[k] != ''}
 
     # ------------------------------------------------------------------

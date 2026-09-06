@@ -1,0 +1,7 @@
+run_id,nodes,num_clients,iter_count,max_async,duration,collocate_client,block_size,pace_maker,nworker,repnworker,clinworker,repburst,cliburst,sb_users,sb_prob_choose_mtx,sb_skew_factor,lat_node0,lat_node1,lat_node2,lat_node3
+NETEM_baseline_r1,4,1,-1,175,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,0,0,0
+NETEM_baseline_r2,4,1,-1,175,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,0,0,0
+NETEM_baseline_r3,4,1,-1,175,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,0,0,0
+NETEM_leader_delayed_50ms_r1,4,1,-1,175,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,50,0,0
+NETEM_leader_delayed_50ms_r2,4,1,-1,175,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,50,0,0
+NETEM_leader_delayed_50ms_r3,4,1,-1,175,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,50,0,0

@@ -157,6 +157,34 @@ class ProtocolParameters:
         }
 
 
+class NetworkParameters:
+    """Per-replica artificial network latency (ms), injected via `tc`
+    on the orchestrator side -- these values never touch hotstuff.conf
+    or the application at all, so they live in their own class rather
+    than ProtocolParameters.
+
+    ``lat_nodeN`` (N in 0..3) is that replica's own assigned latency.
+    The *link* between any two replicas gets max(lat_a, lat_b),
+    applied identically on both ends (see benchmark/netem.py) --
+    0 means unrestricted, and a row that sets no lat_node* columns is
+    a plain no-latency run.
+    """
+
+    def __init__(self, raw):
+        try:
+            self.node_latencies = {
+                i: int(raw.get(f'lat_node{i}', 0)) for i in range(4)
+            }
+        except (TypeError, ValueError) as e:
+            raise ConfigError(f'network param type error: {e}')
+        for i, v in self.node_latencies.items():
+            _require(v >= 0, f'lat_node{i} must be >= 0')
+
+    @property
+    def any_latency(self):
+        return any(v > 0 for v in self.node_latencies.values())
+
+
 def write_ips_file(path, ips):
     """Write a one-IP-per-line file (consumed by ``gen_conf.py --ips``).
 

@@ -108,6 +108,24 @@ def kill(ctx):
 
 
 @task
+def clear_netem(ctx, nodes=4):
+    """Tear down any tc netem rules on the replica hosts.
+
+    The row loop already clears + reapplies netem at the start of
+    every row (self-healing against a prior row's crash), so this is
+    the manual escape hatch: run it any time you want the machines
+    back to a clean, unrestricted network state right now, independent
+    of any CSV run -- e.g. after Ctrl-C'ing a sweep that had a
+    nonzero-latency row active.
+    """
+    try:
+        CloudLabBench(ctx).clear_netem(nodes=int(nodes))
+        Print.heading(f'Cleared netem on the first {nodes} manifest hosts')
+    except (BenchError, GroupException) as e:
+        Print.error(e)
+
+
+@task
 def logs(ctx, run_logs_dir='results/run_logs', run_id=None):
     """Print a human-readable summary for one parsed run.
 
