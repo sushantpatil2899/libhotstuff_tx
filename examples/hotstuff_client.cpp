@@ -18,6 +18,8 @@
 #include <cassert>
 #include <random>
 #include <memory>
+#include <algorithm>
+#include <vector>
 #include <signal.h>
 #include <sys/time.h>
 
@@ -112,8 +114,18 @@ void client_resp_cmd_handler(MsgRespCmd &&msg, const Net::conn_t &) {
     HOTSTUFF_LOG_DEBUG("got %s", std::string(msg.fin).c_str());
     const uint256_t &cmd_hash = fin.cmd_hash;
     auto it = waiting.find(cmd_hash);
-    auto &et = it->second.et;
+    /* Guard BEFORE dereferencing. The previous ordering read it->second
+       on an end() iterator, which happens routinely: the client
+       broadcasts to all N replicas but erases after f+1 acks, so the
+       remaining acks arrive for a hash no longer in `waiting`. */
     if (it == waiting.end()) return;
+    /* Only a committed response confirms. src/hotstuff.cpp sends a
+       Finality with decision=0 ("already pending, don't resend") when a
+       command hash is submitted twice -- that is a receipt, not a
+       commit, and counting it lets a command be "confirmed" without ever
+       reaching consensus. */
+    if (fin.decision != 1) return;
+    auto &et = it->second.et;
     et.stop();
     if (++it->second.confirmed <= nfaulty) return; // wait for f + 1 ack
 #ifndef HOTSTUFF_ENABLE_BENCHMARK
@@ -203,6 +215,39 @@ int main(int argc, char **argv) {
     ec.dispatch();
 
 #ifdef HOTSTUFF_ENABLE_BENCHMARK
+    /* Summary FIRST, then flushed. The per-record dump below is a
+       localtime+strftime+fprintf per sample and loses its race with the
+       harness's SIGKILL grace period on any fast run -- it was silently
+       truncating at ~416k records (~21.6MB) regardless of workload,
+       which made n_committed a prefix and tps a rate over only the first
+       few seconds. These aggregates are O(n) and always survive. */
+    if (!elapsed.empty())
+    {
+        double first = elapsed.front().first.tv_sec +
+                       elapsed.front().first.tv_usec * 1e-6;
+        double last  = elapsed.back().first.tv_sec +
+                       elapsed.back().first.tv_usec * 1e-6;
+        double window = last - first;
+        double sum = 0;
+        std::vector<double> lat;
+        lat.reserve(elapsed.size());
+        for (const auto &e: elapsed) { sum += e.second; lat.push_back(e.second); }
+        /* nth_element is O(n) and leaves a valid permutation of the same
+           multiset, so successive calls stay correct. */
+        auto pct = [&lat](double q) {
+            size_t k = (size_t)(q * (lat.size() - 1));
+            std::nth_element(lat.begin(), lat.begin() + k, lat.end());
+            return lat[k];
+        };
+        double p50 = pct(0.50), p95 = pct(0.95), p99 = pct(0.99);
+        double mx = *std::max_element(lat.begin(), lat.end());
+        fprintf(stderr,
+                "[hotstuff summary] n=%zu window=%.6f mean=%.6f "
+                "p50=%.6f p95=%.6f p99=%.6f max=%.6f\n",
+                elapsed.size(), window, sum / elapsed.size(),
+                p50, p95, p99, mx);
+        fflush(stderr);
+    }
     for (const auto &e: elapsed)
     {
         char fmt[64];

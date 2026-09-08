@@ -51,6 +51,16 @@ _RE_COMMIT = re.compile(
 # matched anything libhotstuff emits.
 _RE_REPLICA_BOOTED = re.compile(r'\[net info\] starting all threads')
 
+# Authoritative per-client aggregates, emitted and flushed by the client
+# before it dumps raw per-command records. The raw dump races the
+# harness's SIGKILL grace period and truncates on any fast run, so when
+# this line is present it is preferred over anything derived from the
+# records themselves.
+_RE_SUMMARY = re.compile(
+    r'\[hotstuff summary\] n=(\d+) window=([0-9.]+) mean=([0-9.]+) '
+    r'p50=([0-9.]+) p95=([0-9.]+) p99=([0-9.]+) max=([0-9.]+)'
+)
+
 
 class ParseError(Exception):
     pass
@@ -88,7 +98,8 @@ class LogParser:
     """
 
     def __init__(self, client_samples, replica_booted, meta=None):
-        # client_samples: list of (timestamps_sorted, latencies_sorted) per
+        # client_samples: list of (timestamps_sorted, latencies_sorted,
+        #                   summary_or_None) per
         # client. Inside each pair the lists are sorted independently
         # (timestamps by event time, latencies for percentile math).
         self.client_samples = client_samples
@@ -101,8 +112,22 @@ class LogParser:
     def _read_client_log(path):
         timestamps = []
         latencies = []
+        summary = None
         with open(path, 'r', errors='replace') as f:
             for line in f:
+                if summary is None:
+                    ms = _RE_SUMMARY.search(line)
+                    if ms:
+                        summary = {
+                            'n': int(ms.group(1)),
+                            'window': float(ms.group(2)),
+                            'mean': float(ms.group(3)),
+                            'p50': float(ms.group(4)),
+                            'p95': float(ms.group(5)),
+                            'p99': float(ms.group(6)),
+                            'max': float(ms.group(7)),
+                        }
+                        continue
                 m = _RE_COMMIT.search(line)
                 if not m:
                     continue
@@ -115,7 +140,7 @@ class LogParser:
                 latencies.append(lat)
         timestamps.sort()
         latencies.sort()
-        return timestamps, latencies
+        return timestamps, latencies, summary
 
     @staticmethod
     def _read_replica_log(path):
@@ -149,7 +174,7 @@ class LogParser:
         for p in client_paths:
             client_samples.append(cls._read_client_log(p))
 
-        total = sum(len(ts) for ts, _ in client_samples)
+        total = sum(len(ts) for ts, _, _ in client_samples)
         if total == 0:
             raise ParseError(
                 f'parsed {len(client_paths)} client log(s) under {directory} '
@@ -170,7 +195,7 @@ class LogParser:
     def _aggregate(self):
         all_ts = []
         all_lat = []
-        for ts, lat in self.client_samples:
+        for ts, lat, _ in self.client_samples:
             all_ts.extend(ts)
             all_lat.extend(lat)
         all_ts.sort()
@@ -192,14 +217,44 @@ class LogParser:
         all_ts, all_lat = self._aggregate()
         tps, window = self._throughput(all_ts)
         lat_mean_ms = (mean(all_lat) * 1_000) if all_lat else 0.0
+
+        p50 = _percentile(all_lat, 50)
+        p95 = _percentile(all_lat, 95)
+        p99 = _percentile(all_lat, 99)
+        n_committed = len(all_ts)
+        truncated = False
+
+        # Prefer the client-emitted summary. The raw records it is derived
+        # from are truncated whenever the shutdown dump loses its race
+        # with SIGKILL, which silently caps n_committed and makes tps a
+        # rate over only the run's opening seconds.
+        summaries = [sm for _, _, sm in self.client_samples if sm]
+        if summaries and len(summaries) == len(self.client_samples):
+            n_committed = sum(sm['n'] for sm in summaries)
+            window = max(sm['window'] for sm in summaries)
+            tps = (n_committed / window) if window > 0 else 0.0
+            lat_mean_ms = (
+                sum(sm['mean'] * sm['n'] for sm in summaries)
+                / n_committed * 1_000
+            ) if n_committed else 0.0
+            # Percentiles are exact only for a single client; combining
+            # per-client percentiles is not meaningful, so fall back to
+            # the (possibly truncated) records in the multi-client case.
+            if len(summaries) == 1:
+                p50, p95, p99 = (summaries[0]['p50'], summaries[0]['p95'],
+                                 summaries[0]['p99'])
+            truncated = n_committed > len(all_ts)
+
         return {
             'tps': round(tps, 2),
             'latency_ms_mean': round(lat_mean_ms, 3),
-            'latency_ms_p50': round(_percentile(all_lat, 50) * 1_000, 3),
-            'latency_ms_p95': round(_percentile(all_lat, 95) * 1_000, 3),
-            'latency_ms_p99': round(_percentile(all_lat, 99) * 1_000, 3),
+            'latency_ms_p50': round(p50 * 1_000, 3),
+            'latency_ms_p95': round(p95 * 1_000, 3),
+            'latency_ms_p99': round(p99 * 1_000, 3),
             'duration_s': round(window, 2),
-            'n_committed': len(all_ts),
+            'n_committed': n_committed,
+            'n_records_dumped': len(all_ts),
+            'raw_dump_truncated': truncated,
             'n_clients': len(self.client_samples),
             'n_replicas_booted': self.replica_booted,
         }

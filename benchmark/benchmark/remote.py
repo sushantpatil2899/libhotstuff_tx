@@ -88,6 +88,12 @@ RESULT_COLUMNS = (
     'latency_ms_p99',
     'duration_s',
     'n_committed',
+    # How many raw per-command records survived the client's shutdown
+    # dump, and whether that dump was cut short. n_committed comes from
+    # the client's flushed summary and is authoritative; these two say
+    # how much of the per-command detail is actually on disk.
+    'n_records_dumped',
+    'raw_dump_truncated',
     'n_clients',
     'n_replicas_booted',
     'status',

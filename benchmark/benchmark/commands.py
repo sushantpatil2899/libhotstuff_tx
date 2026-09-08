@@ -208,13 +208,33 @@ class CommandMaker:
         of ``-1`` means run forever — the harness kills it after
         ``duration`` seconds. ``cid`` must be unique across concurrent
         clients or commands collide on hash.
+
+        ``conf_file`` is deliberately NOT passed as ``--conf``.
+        hotstuff_client.cpp hardcodes ``Config config("hotstuff.conf")``,
+        which salticidae already loads from cwd ($HOME, where the harness
+        uploads it). Passing the same basename again loaded it twice, and
+        ``replica`` is registered with ``Config::APPEND``, so the replica
+        list doubled to 8 entries. Consequences, all silent:
+          * nfaulty = (8-1)/3 = 2, so the client waited for 3 acks, not 2
+          * two connections per replica, so every command was submitted
+            twice and the leader proposed 2x the command slots
+          * the duplicate submission hit the "already pending" branch in
+            src/hotstuff.cpp, which replies Finality(decision=0)
+            immediately -- letting commands be "confirmed" with no
+            consensus at all, which is what made tps and latency
+            unusable under injected network latency.
+        ``run_replica`` is unaffected: it passes hotstuff-sec{i}.conf, a
+        different basename, so its list is not doubled.
         """
+        assert conf_file == 'hotstuff.conf', (
+            f'client conf must be the auto-loaded basename, got {conf_file!r}'
+        )
         extra = ''
         if max_cli_msg is not None:
             extra += f' --max-cli-msg {int(max_cli_msg)}'
         bin_path = join(repo_dir, 'examples', 'hotstuff-client')
         return (
-            f"bash -lc './{bin_path} --conf {conf_file} "
+            f"bash -lc './{bin_path} "
             f"--cid {int(cid)} --iter {int(iter_count)} "
             f"--max-async {int(max_async)}{extra}'"
         )
