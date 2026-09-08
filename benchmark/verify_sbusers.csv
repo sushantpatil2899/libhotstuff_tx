@@ -1,0 +1,3 @@
+run_id,nodes,num_clients,iter_count,max_async,duration,collocate_client,block_size,pace_maker,nworker,repnworker,clinworker,repburst,cliburst,sb_users,sb_prob_choose_mtx,sb_skew_factor,lat_node0,lat_node1,lat_node2,lat_node3
+SBV_u1e3,4,1,-1,2000,45,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,0,0,0
+SBV_u1e7,4,1,-1,2000,45,false,200,dummy,4,4,4,1000,1000,10000000,0.9,0.1,0,0,0,0
