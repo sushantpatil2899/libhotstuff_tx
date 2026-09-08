@@ -1,8 +1,9 @@
 > # ⚠️ RETRACTED — 2026-09-07
 >
 > **The headline findings in this document are void. The injected
-> network latency never reached the consensus path, so every result
-> below was measured under a manipulation that did not happen.**
+> latency provably reached the replicas' own TCP sockets, yet left no
+> trace whatsoever on commit latency. The results below therefore do
+> not measure what they claim to, and the reason is unresolved.**
 >
 > ## Proof
 >
@@ -26,15 +27,47 @@
 > 36.55ms — 5.5x faster than a *single* one-way hop. Not one command
 > shows any trace of the delay.
 >
-> The `tc` rules were installed (ping verification in
-> `NETEM_ANALYSIS.md` is exact) and the replicas do use the filtered
-> addresses (`10.10.1.x:10000` on `enp65s0f0np0`). The break is
-> somewhere between "rules installed" and "app traffic traverses
-> them"; diagnosing it needs the cluster.
+> ## Correction: the delay *was* applied to application traffic
+>
+> An earlier version of this retraction concluded the delay never
+> reached app traffic. That was wrong, and the replicas' own logs
+> disprove it. Each replica logs connection setup, and timing the
+> inter-replica TCP handshake gives:
+>
+> | run | leader->node0 | leader->node2 |
+> |---|---|---|
+> | all 3 followers @200ms | **400.22 ms** | 400.21 ms |
+> | leader @200ms | **400.23 ms** | 400.22 ms |
+> | no delay | **10.98 ms** | — |
+>
+> 400.2ms is exactly 2 x 200ms RTT, on the application's own TCP
+> connections, to the filtered addresses (`10.10.1.x:10000` on
+> `enp65s0f0np0`). The shaping is real and it applies to consensus
+> sockets.
+>
+> So the contradiction is sharper than "the rules did not work":
+> **the same links measure 400ms RTT at connection time and ~7ms
+> end-to-end commits under load.** Both numbers are solid.
+>
+> One candidate was chased and eliminated. `src/hotstuff.cpp:454`
+> acks a client immediately with `decision=0` when a command hash is
+> already pending, and `client_resp_cmd_handler` never inspects
+> `fin.decision` before counting an ack — so duplicate commands would
+> produce instant "commits" that bypass consensus entirely. It is a
+> real latent bug, but it cannot fire here: `CommandDummy::serialize`
+> writes `cid << n` with a per-client monotonic counter, so every
+> command hash is unique.
+>
+> Resolving this needs the cluster, and the instrument now exists:
+> building with `HOTSTUFF_PROTO_LOG=ON` logs `propose <block id=...>`
+> on the leader and `got <proposal ... id>` on each follower, so
+> correlating on block id measures the true one-way latency of real
+> consensus messages in steady state.
 >
 > ## What the data actually shows
 >
-> Re-analysed with the delay assumed inert:
+> Re-analysed treating the delay as having no effect on the commit
+> path (whatever the cause):
 >
 > - **Delay magnitude does nothing.** Within each shape (qdisc
 >   topology fixed, only the value varying), r(tps, magnitude) is
@@ -48,14 +81,19 @@
 >   single-reservation bs3200 block, so not a reservation artifact.
 > - **Unexplained**: in `NETEM_ANALYSIS.md`'s sanity test, baseline
 >   (43.0k) and leader+50ms (50.4k) ran back-to-back in one sweep,
->   +17%. Installing the rules moved throughput even though the
->   delay did not apply.
+>   +17%. Installing the rules moved throughput without the delay
+>   ever showing up in commit latency.
 >
 > **Leading hypothesis (untested):** installing `prio` replaces the
-> NIC's default root qdisc, which is `mq` with 64 hardware TX queues
-> each running `fq_codel`. Collapsing that into one classful `prio`
-> qdisc is a large egress-path change independent of the delay
-> value — consistent with both the magnitude-independence and the
+> NIC's default root qdisc. Both configurations were captured
+> directly: the default is `mq` with 64 hardware TX queues each
+> running `fq_codel limit 10240p ... target 5ms ecn`, and ours is a
+> single `prio` whose bands each carry `netem limit 1000`. That is a
+> 10x shallower FIFO with no AQM, a textbook backpressure change —
+> and `limit 1000` does not depend on the delay value, which is
+> exactly the observed signature. It is a large egress-path change
+> independent of the delay value — consistent with both the
+> magnitude-independence and the
 > step-not-gradient shape.
 >
 > **Control experiment to settle it:** apply the identical qdisc

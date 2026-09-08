@@ -1,13 +1,20 @@
 > # ⚠️ RETRACTED — 2026-09-07
 >
-> **The "mechanism verified" claim below is wrong, and the conclusion
-> drawn from it does not hold. The `tc` rules were installed, but the
-> injected delay never reached the consensus path.**
+> **The conclusion drawn below does not hold. The delay did reach the
+> application's own sockets, yet the commit path shows no trace of
+> it. That contradiction is unresolved.**
 >
-> The ping table below is accurate — ICMP to `10.10.1.x` really was
-> delayed exactly as shown. But ping only proves the rules affect
-> ICMP. It does not prove they affect the application's traffic, and
-> they did not.
+> The ping table below is accurate, and the mechanism is in fact
+> better verified than this document claimed. Ping alone would only
+> prove the rules affect ICMP — but the replicas' own connection logs
+> time the inter-replica TCP handshake at **400.2ms** on every delayed
+> link (exactly 2 x 200ms RTT) against **11.0ms** on an undelayed run.
+> So `tc` demonstrably shapes real consensus sockets, not just ICMP.
+>
+> What does not follow is the commit latency. See the retraction header
+> in `NETEM_FACTORIAL_ANALYSIS.md`: delayed links carry 400ms RTT at
+> connection time, while commits complete in ~7ms. Both measurements
+> are solid and they cannot both describe the same steady state.
 >
 > ## The number that should have caught this immediately
 >
