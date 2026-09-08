@@ -323,15 +323,27 @@ class CloudLabBench:
         return replica_pairs, extras
 
     @retry_on_ssh_error()
-    def _update(self, bench: BenchParameters):
-        """git pull + rebuild on every replica + client host."""
+    def _update(self, bench: BenchParameters, proto_log: bool = False):
+        """git pull + rebuild on every replica + client host.
+
+        ``proto_log=True`` builds with HOTSTUFF_PROTO_LOG=ON, which makes
+        each replica log one line per consensus event -- notably
+        ``propose <block ... ncmds=N ...>``, giving the round count and
+        the batch size of every block straight from the replica. It does
+        NOT pull in HOTSTUFF_NORMAL_LOG (see include/hotstuff/util.h:41),
+        so the per-commit ``replicated %s`` line in hotstuff_app.cpp stays
+        compiled out and the hot path keeps its per-command silence.
+        Costs roughly 2.5k lines/s on the leader at block_size=200.
+        """
         hosts = self.manager.ssh_hosts()
         Print.info(f'Updating + rebuilding on {len(hosts)} nodes '
-                   f'(branch "{self.settings.branch}")...')
+                   f'(branch "{self.settings.branch}", '
+                   f'proto_log={"ON" if proto_log else "OFF"})...')
         repo = self.settings.repo_name
         cmd = ' && '.join([
             CommandMaker.git_sync(repo, self.settings.branch),
-            CommandMaker.cmake_configure(repo, benchmark=False),
+            CommandMaker.cmake_configure(repo, benchmark=False,
+                                         proto_log=proto_log),
             CommandMaker.make(repo),
         ])
         g = self._group(hosts)
@@ -589,7 +601,7 @@ class CloudLabBench:
     # ------------------------------------------------------------------
 
     def run_from_csv(self, input_file: str, output_file: str,
-                     debug: bool = False) -> None:
+                     debug: bool = False, proto_log: bool = False) -> None:
         """Read ``input_file``, run each row, write ``output_file``."""
         Print.heading(f'Starting CSV-driven CloudLab benchmark: {input_file}')
 
@@ -616,7 +628,7 @@ class CloudLabBench:
         except ConfigError as e:
             raise BenchError(f'First row has invalid bench params', e)
         try:
-            self._update(first_bench)
+            self._update(first_bench, proto_log=proto_log)
         except (GroupException, ExecutionError, SSHException,
                 OSError, EOFError) as e:
             e = FabricError(e) if isinstance(e, GroupException) else e

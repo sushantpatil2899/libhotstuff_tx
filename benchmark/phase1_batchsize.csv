@@ -1,0 +1,5 @@
+run_id,nodes,num_clients,iter_count,max_async,duration,collocate_client,block_size,pace_maker,nworker,repnworker,clinworker,repburst,cliburst,sb_users,sb_prob_choose_mtx,sb_skew_factor,lat_node0,lat_node1,lat_node2,lat_node3
+P1_bs200_ma8000,4,1,-1,8000,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,0,0,0
+P1_bs800_ma8000,4,1,-1,8000,60,false,800,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,0,0,0
+P1_bs3200_ma8000,4,1,-1,8000,60,false,3200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,0,0,0
+P1_bs200_ma400,4,1,-1,400,60,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,0,0,0
