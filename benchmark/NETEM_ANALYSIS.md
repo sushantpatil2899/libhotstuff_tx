@@ -1,3 +1,54 @@
+> # ⚠️ RETRACTED — 2026-09-07
+>
+> **The "mechanism verified" claim below is wrong, and the conclusion
+> drawn from it does not hold. The `tc` rules were installed, but the
+> injected delay never reached the consensus path.**
+>
+> The ping table below is accurate — ICMP to `10.10.1.x` really was
+> delayed exactly as shown. But ping only proves the rules affect
+> ICMP. It does not prove they affect the application's traffic, and
+> they did not.
+>
+> ## The number that should have caught this immediately
+>
+> This document reports leader+50ms with **p50 latency of 3.11ms**.
+> Client latency is true end-to-end (timer starts at send, stops on
+> the f+1-th ack; a replica only acks from inside the commit path —
+> `do_decide`, `src/consensus.cpp:148`). A commit crosses ~6 delayed
+> hops, so 50ms one-way implies a floor near 300ms. 3.11ms is
+> physically impossible under a working 50ms injection.
+>
+> Confirmed later across ~1.7M commands: under 200ms on all three
+> follower links, the *slowest* of 431,947 commands was 36.55ms —
+> 5.5x faster than a single one-way hop.
+>
+> ## The reasoning error
+>
+> This document explained the null result by saying a fixed per-link
+> delay "gets absorbed by pipelining rather than serializing onto the
+> critical path." That is wrong. Pipelining hides delay's effect on
+> **throughput**, because many commands are in flight across
+> overlapping rounds. It cannot hide it from **per-command latency**,
+> because each individual command still waits its own 3 rounds.
+> Conflating the two turned an impossible measurement into an
+> apparent explanation, and let a broken mechanism look verified for
+> the entire 384-run factorial that followed.
+>
+> ## What survives
+>
+> The +17% same-sweep difference reported below (baseline 43.0k vs
+> leader+50ms 50.4k, back-to-back, 3 reps each) is a real, unexplained
+> effect — but it cannot be a latency effect. Across the full
+> factorial, delay *magnitude* turned out to be inert
+> (r ~ 0 with tps within every well-sampled shape), which points at
+> the act of installing the qdisc rather than the delay it carries.
+> Installing `prio` replaces the NIC's default root qdisc — `mq` with
+> 64 hardware TX queues each running `fq_codel`. See the retraction
+> header in `NETEM_FACTORIAL_ANALYSIS.md` for the full re-analysis and
+> the `delay 0ms` control that would settle it.
+>
+> ---
+
 # Network latency injection — mechanism verified, first result is surprising
 
 ## Mechanism verification (ground truth, not inference)

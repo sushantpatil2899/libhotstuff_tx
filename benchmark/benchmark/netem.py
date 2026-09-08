@@ -22,7 +22,6 @@ type.
 """
 from __future__ import annotations
 
-import subprocess
 from typing import Dict, List, Tuple
 
 
@@ -46,20 +45,28 @@ def compute_pairwise_delays(node_latencies: Dict[int, int]) -> Dict[Tuple[int, i
     return pairs
 
 
-def discover_iface(host, user, peer_ip):
-    """SSH to `host` and ask the kernel which device it would use to
-    reach `peer_ip`. Works for any interface naming scheme."""
-    r = subprocess.run(
-        ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10',
-         f'{user}@{host}', f'ip route get {peer_ip}'],
-        capture_output=True, text=True, timeout=15,
-    )
-    for token, nxt in zip(r.stdout.split(), r.stdout.split()[1:]):
+def discover_iface(conn, peer_ip):
+    """Ask the kernel on ``conn``'s host which device it would use to
+    reach `peer_ip`. Works for any interface naming scheme.
+
+    Takes the caller's pooled Fabric ``Connection`` rather than opening
+    its own SSH session. An earlier version shelled out to `ssh` per
+    call; each such call left a lingering connection on the host, ~2 per
+    host per row, which reached ~480/host over a 300-row sweep and
+    eventually stalled it. Going through the pool also means failures
+    surface as paramiko/Fabric exceptions, which ``retry_on_ssh_error``
+    knows how to retry -- ``subprocess.TimeoutExpired`` was not in its
+    ``TRANSIENT_EXCEPTIONS``, so those failures killed the row outright.
+    """
+    r = conn.run(f'ip route get {peer_ip}', hide=True, warn=True)
+    stdout = r.stdout or ''
+    tokens = stdout.split()
+    for token, nxt in zip(tokens, tokens[1:]):
         if token == 'dev':
             return nxt
     raise NetemError(
-        f'could not determine outbound interface on {host} toward {peer_ip}: '
-        f'{r.stdout!r} {r.stderr!r}'
+        f'could not determine outbound interface on {conn.host} toward '
+        f'{peer_ip}: {stdout!r} {(r.stderr or "")!r}'
     )
 
 

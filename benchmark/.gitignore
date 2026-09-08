@@ -7,3 +7,4 @@ __pycache__/
 hotstuff.gen*.conf
 hotstuff.gen-sec*.conf
 nodes.txt
+.DS_Store

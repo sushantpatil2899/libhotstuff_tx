@@ -1,0 +1,4 @@
+run_id,nodes,num_clients,iter_count,max_async,duration,collocate_client,block_size,pace_maker,nworker,repnworker,clinworker,repburst,cliburst,sb_users,sb_prob_choose_mtx,sb_skew_factor,lat_node0,lat_node1,lat_node2,lat_node3
+LEAKFIX_lat0,4,1,-1,400,30,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,0,0,0
+LEAKFIX_leader100,4,1,-1,400,30,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,0,100,0,0
+LEAKFIX_f0_150,4,1,-1,400,30,false,200,dummy,4,4,4,1000,1000,1000,0.9,0.1,150,0,0,0

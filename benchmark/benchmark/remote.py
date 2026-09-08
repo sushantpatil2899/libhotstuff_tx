@@ -105,6 +105,11 @@ class CloudLabBench:
         # a new Connection per launch trips sshd's MaxStartups limit at
         # tens of clients (we saw this in Narwhal at workers=20).
         self._ssh_pool: dict[str, Connection] = {}
+        # Outbound interface toward the experiment LAN, per host. Stable
+        # for the life of a reservation, so discover it once instead of
+        # twice per row. Holds only the device name, so it stays valid
+        # across _reset_pool().
+        self._iface_cache: dict[str, str] = {}
 
     # ------------------------------------------------------------------
     # SSH connection plumbing
@@ -116,6 +121,20 @@ class CloudLabBench:
             c = Connection(ssh_host, user=self.user)
             self._ssh_pool[ssh_host] = c
         return c
+
+    def _group(self, hosts) -> Group:
+        """ThreadingGroup built over the POOLED connections for ``hosts``.
+
+        ``Group(*hosts, user=...)`` opens a brand-new SSH connection per
+        host on every call and never closes it. With ``kill()`` running
+        twice per row that leaked exactly 2 connections per host per row,
+        which reached ~480/host over a 300-row sweep, exhausted the
+        remote sshd's headroom, and stalled the sweep (rows went from
+        ~15s to 10-35min). Building the group from the pool instead
+        means a row reuses the same connections and ``_reset_pool()``
+        actually reclaims them.
+        """
+        return Group.from_connections([self._conn(h) for h in hosts])
 
     def _reset_pool(self) -> None:
         for c in self._ssh_pool.values():
@@ -240,7 +259,7 @@ class CloudLabBench:
         ])
         hosts = self.manager.ssh_hosts()
         try:
-            g = Group(*hosts, user=self.user)
+            g = self._group(hosts)
             g.run(cmd, hide=True)
             Print.heading(f'Initialized testbed of {len(hosts)} nodes')
         except (GroupException, ExecutionError) as e:
@@ -269,7 +288,7 @@ class CloudLabBench:
             f'({CommandMaker.kill()} || true)',
         ]
         cmd = ' && '.join(pieces)
-        g = Group(*hosts, user=self.user)
+        g = self._group(hosts)
         g.run(cmd, hide=True)
 
     # ------------------------------------------------------------------
@@ -315,7 +334,7 @@ class CloudLabBench:
             CommandMaker.cmake_configure(repo, benchmark=False),
             CommandMaker.make(repo),
         ])
-        g = Group(*hosts, user=self.user)
+        g = self._group(hosts)
         g.run(cmd, hide=True)
 
     def _generate_configs(self, protocol: ProtocolParameters,
@@ -396,6 +415,14 @@ class CloudLabBench:
                 c.run(f'{CommandMaker.cleanup()} || true', hide=True)
                 c.put(main_conf, PathMaker.main_conf_file())
 
+    def _iface_for(self, ssh_host, peer_ip):
+        """Cached netem.discover_iface over the pooled connection."""
+        iface = self._iface_cache.get(ssh_host)
+        if iface is None:
+            iface = netem.discover_iface(self._conn(ssh_host), peer_ip)
+            self._iface_cache[ssh_host] = iface
+        return iface
+
     def _clear_netem(self, replica_pairs):
         """Tear down any tc qdisc on every replica host. Safe no-op if
         nothing was set up (teardown_command swallows the "no such
@@ -409,7 +436,7 @@ class CloudLabBench:
         for i, (ssh_host, my_ip) in enumerate(replica_pairs):
             peer_ip = next(ip for j, (_, ip) in enumerate(replica_pairs) if j != i)
             try:
-                iface = netem.discover_iface(ssh_host, self.user, peer_ip)
+                iface = self._iface_for(ssh_host, peer_ip)
             except netem.NetemError as e:
                 Print.warn(f'_clear_netem: {e}; skipping {ssh_host}')
                 continue
@@ -427,7 +454,7 @@ class CloudLabBench:
         ip_by_idx = {i: ip for i, (_, ip) in enumerate(replica_pairs)}
         for i, (ssh_host, _my_ip) in enumerate(replica_pairs):
             peer_ips = {j: ip for j, ip in ip_by_idx.items() if j != i}
-            iface = netem.discover_iface(ssh_host, self.user, next(iter(peer_ips.values())))
+            iface = self._iface_for(ssh_host, next(iter(peer_ips.values())))
             cmds = netem.setup_commands(i, peer_ips, pairwise, iface)
             if not cmds:
                 continue
@@ -435,6 +462,7 @@ class CloudLabBench:
             for cmd in cmds:
                 c.run(cmd, hide=True)
 
+    @retry_on_ssh_error()
     def clear_netem(self, nodes=4):
         """Standalone entry point (see fabfile.py's `clear-netem` task):
         tear down tc on the first `nodes` manifest hosts, independent of
