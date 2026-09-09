@@ -8,7 +8,7 @@ Reservation: CloudLab Utah Exp-3, `d6515`. 4 replicas (node1 = fixed
 proposer), 1 dedicated client host (node4, 64 cores), node5 as
 orchestrator. 60s runs, no injected network latency.
 
-Totals: 429 runs across four sweeps, 0 run errors, 0 parse failures.
+Totals: 492 runs across five sweeps, 0 run errors, 0 parse failures.
 
 ---
 
@@ -49,6 +49,46 @@ That is **5.0x** the best single-client figure ever recorded here
 `max_async` spanning 512x and `block_size` 16x, and never exceeded
 90,770 tps. The apparent plateau at ~90k was a property of running one
 client process, not of the system.
+
+---
+
+## 2b. Baselines
+
+These four are the throughput/latency frontier of the Stage D3 grid: no
+other cell has both higher throughput and lower latency. Medians, 7
+reps where re-run, 3 otherwise.
+
+| | block_size | clients | max_async | tps | latency | spread |
+|---|---|---|---|---|---|---|
+| **B1** lowest latency | 200 | 2 | 1,000 | 167,191 | 12.0 ms | 3.8% |
+| **B2** mid | 800 | 4 | 1,000 | 310,922 | 12.9 ms | 4.6% |
+| **B3** recommended | 1600 | 8 | 1,000 | **446,133** | **18.0 ms** | **0.9%** |
+| **B4** max throughput | 3200 | 8 | 4,000 | 459,963 | 69.5 ms | 1.3% |
+
+**Every frontier cell sits at `max_async = 1,000` except B4** -- the
+lowest level tested. Raising `max_async` past that costs latency without
+adding throughput.
+
+B3 carries the tightest rep spread of any cell in the dataset (0.9%).
+B4 buys 3.1% more throughput than B3 for 3.9x the latency.
+
+Best throughput per latency band, restricted to cells with spread <=15%
+and no collapsed run:
+
+| band | config | tps | latency |
+|---|---|---|---|
+| <25 ms | bs1600 / c8 / ma1000 | 446,133 | 18.0 |
+| 25-50 ms | bs1600 / c16 / ma1000 | 435,609 | 35.8 |
+| 50-100 ms | bs3200 / c8 / ma4000 | 459,963 | 69.5 |
+| 100-200 ms | bs3200 / c16 / ma4000 | 416,446 | 153.1 |
+| 200+ ms | bs3200 / c8 / ma16000 | 405,707 | 273.6 |
+
+Throughput varies 405k-460k across the bands while latency spans 18 ms
+to 274 ms.
+
+A pattern in the frontier, recorded as an observation with no mechanism
+established: block size and client count rise together -- 200/2, 800/4,
+1600/8, 3200/16 -- with throughput tracking their product.
 
 ---
 
@@ -227,8 +267,14 @@ other two runs bracket the 16-client result. The comparison is
 therefore **unusable rather than proven flat**: a 42% difference cannot
 be resolved by a measurement that varies by 112%.
 
-The other 18 client comparisons were flat on tighter data, so the
-verdict probably holds, but it rests in part on one un-callable cell.
+The other 18 client comparisons were flat on tighter data.
+
+**Resolved by re-run (7 reps, section 8).** That 8-client cell's median
+is 393,547 with a spread of 7.6%; its old 3-rep mean of 262,310 had been
+pulled down by the single 96,707 run. Recomputed on medians, 16 clients
+versus 8 gives **-5.1% against a 7.6% spread -> flat**. The apparent
++41.9% was entirely an artifact of that one run. The `clients` verdict
+now rests on clean data.
 
 ---
 
@@ -267,23 +313,76 @@ logs: `ncmds` equalled the configured value in every block across
    against 16 x 163% expected).
 4. Why nine cells exhibit rep spreads above 15%, up to 112.4%, while
    the median is 3.8%.
+5. What causes the collapsed runs described in section 8 -- individual
+   repetitions landing at a fraction of the other runs of the same
+   configuration, in cells that are otherwise tight. More repetitions
+   exposed more of them rather than reducing them.
 
 ---
 
-## 8. Pending
+## 8. Re-run of the nine high-variance cells (7 reps)
 
-A re-run of the nine cells with rep spread above 15%, at 7 reps
-instead of 3 (`rerun_noisy.csv`, 63 runs), to establish whether their
-values are reproducible and whether the `clients` edge verdict in
-section 5 survives. Results will land in
-`results/rerun_noisy_results.csv`.
+63 runs, 0 errors. Medians against the original 3-rep means:
 
-Not yet run: `block_size` extension to 6400 at 8 and 16 clients with
+| cell | old mean | old spread | new median | new spread | median vs old |
+|---|---|---|---|---|---|
+| bs200 c2 ma64000 | 165,004 | 16.7% | 173,922 | 6.4% | +5.4% |
+| bs200 c8 ma1000 | 185,142 | 18.0% | 194,406 | **2.0%** | +5.0% |
+| bs400 c2 ma64000 | 161,235 | 24.7% | 166,951 | 11.9% | +3.5% |
+| bs400 c8 ma4000 | 255,526 | 15.1% | 263,036 | 15.9% | +2.9% |
+| bs800 c16 ma64000 | 275,316 | 29.9% | 304,300 | **86.9%** | +10.5% |
+| bs1600 c8 ma64000 | 308,526 | 43.6% | 355,921 | **52.1%** | +15.4% |
+| bs3200 c8 ma64000 | 262,310 | 112.4% | 393,547 | **7.6%** | **+50.0%** |
+| bs3200 c16 ma1000 | 438,340 | 30.6% | 480,905 | 30.7% | +9.7% |
+| bs3200 c16 ma16000 | 379,093 | 15.7% | 396,260 | 34.1% | +4.5% |
+
+**Every median came in above its old mean**, by 2.9% to 50.0%. The
+original 3-rep grid understated these nine cells.
+
+**The variance is not broad noise -- it is occasional collapsed runs.**
+The raw reps show most runs clustering tightly with one or two far
+below:
+
+    bs800 c16 ma64000:  [ 73,351, 301,526, 303,642, 304,300,
+                          304,584, 304,807, 309,473]
+    bs1600 c8 ma64000:  [190,489, 309,593, 344,635, 355,921,
+                          356,841, 358,076, 359,773]
+    bs3200 c16 ma16000: [284,748, 387,012, 395,381, 396,260,
+                          399,048, 402,890, 415,517]
+
+In the first, six runs fall within 2.6% of each other and one is a
+quarter of the rest. Three cells got *worse* on spread at 7 reps
+(86.9%, 52.1%, 34.1%) because more reps exposed more collapses rather
+than averaging them away.
+
+Consequence: the **median** is the correct statistic for these cells.
+No cause for the collapses is established. They occur at
+`max_async=64,000` in two of the three worst cases, which is a statement
+about where they were observed, not a mechanism.
+
+---
+
+## 9. Pending
+
+**Stage E (running):** threads, `sb_skew_factor` and
+`sb_prob_choose_mtx` re-tested at each of the four baselines in section
+2b. Stage A bounded all three below ~4.5% but measured them only at
+`bs=200, ma=2000`, single client, ~85k tps. The baselines run
+167k-460k with 2-8 clients, so that bound does not carry over.
+32 configs x 3 reps = 96 runs, `stage_e.csv`, results to
+`results/stage_e_results.csv`.
+
+**Not yet run:** `block_size` extension to 6400 at 8 and 16 clients with
 `max_async` 4,000-16,000, which is what section 5 indicates.
 
+**Carry-over:** the network-latency work predates the measurement fix
+and was run entirely single-client, in the regime now known to be
+client-limited. It will need re-running at one or more of the section 2b
+baselines.
+
 ---
 
-## 9. Data
+## 10. Data
 
 | file | contents |
 |---|---|
