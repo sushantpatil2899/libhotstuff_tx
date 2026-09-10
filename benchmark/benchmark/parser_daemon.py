@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from glob import glob
 import os
 import signal
 import sys
@@ -73,7 +74,61 @@ def _atomic_write(path, content):
     os.replace(tmp, path)
 
 
-def _process_dir(run_dir):
+SUMMARY_FILE = 'summaries.txt'
+
+
+def _prune_client_logs(run_dir):
+    """Replace the raw client logs with just their summary lines.
+
+    The client dumps one localtime+strftime+fprintf per committed
+    command after SIGTERM, racing the harness's kill grace period, so the
+    raw records are a truncated prefix of the run and are never complete.
+    Everything the parser actually uses is the flushed
+    ``[hotstuff summary]`` line, which is already folded into
+    metrics.json by the time this runs.
+
+    Those truncated records are nevertheless ~21MB per client per run.
+    At 8-16 clients that filled a 63GB node disk partway through a
+    sweep, which surfaced as a cascade of ``[Errno 28]`` failures rather
+    than anything legible. The summary lines are kept in
+    ``summaries.txt`` so the parse can always be re-verified against what
+    the client reported.
+
+    Returns bytes reclaimed.
+    """
+    logs = sorted(glob(os.path.join(run_dir, 'client-*.log')))
+    if not logs:
+        return 0
+    lines = []
+    for path in logs:
+        name = os.path.basename(path)
+        try:
+            with open(path, 'r', errors='replace') as f:
+                for line in f:
+                    if '[hotstuff summary]' in line:
+                        lines.append(f'{name}: {line.rstrip()}')
+        except OSError:
+            return 0
+    # Refuse to prune if no summary was found: that client predates the
+    # summary line, and its raw records are then the only record there is.
+    if not lines:
+        return 0
+    try:
+        _atomic_write(os.path.join(run_dir, SUMMARY_FILE),
+                      '\n'.join(lines) + '\n')
+    except OSError:
+        return 0
+    freed = 0
+    for path in logs:
+        try:
+            freed += os.path.getsize(path)
+            os.remove(path)
+        except OSError:
+            pass
+    return freed
+
+
+def _process_dir(run_dir, prune=True):
     """Parse one READY run dir. Returns 'ok', 'error', or 'skip'."""
     ready_path = os.path.join(run_dir, READY_MARKER)
     metrics_path = os.path.join(run_dir, METRICS_FILE)
@@ -110,9 +165,11 @@ def _process_dir(run_dir):
                   f'{run_dir}: {txt_err}')
         os.remove(ready_path)
         dt = time.time() - t0
+        freed = _prune_client_logs(run_dir) if prune else 0
+        extra = f', pruned {freed / 1e6:.0f}MB' if freed else ''
         print(f'[parser-daemon] OK {run_dir} in {dt:.1f}s — '
               f'tps={metrics.get("tps")} '
-              f'lat={metrics.get("latency_ms_mean")}ms')
+              f'lat={metrics.get("latency_ms_mean")}ms{extra}')
         return 'ok'
     except (ParseError, OSError, ValueError, IndexError, AttributeError,
             AssertionError, KeyError) as e:
@@ -155,6 +212,13 @@ def main(argv=None):
                              '(default: results/final_results.csv)')
     parser.add_argument('--poll-interval', type=int, default=10,
                         help='Seconds between scans (default: 10)')
+    parser.add_argument('--no-prune', action='store_true',
+                        help='keep the raw per-command client logs after '
+                             'parsing. By default they are replaced with '
+                             'summaries.txt, since they are a truncated '
+                             'prefix of the run and metrics.json already '
+                             'holds everything the parser derives from '
+                             'them. ~21MB per client per run otherwise.')
     parser.add_argument('--once', action='store_true',
                         help='Single pass and exit (for testing)')
     args = parser.parse_args(argv)
@@ -179,7 +243,7 @@ def main(argv=None):
                 run_dir = os.path.join(args.run_logs_dir, entry)
                 if not os.path.isdir(run_dir):
                     continue
-                outcome = _process_dir(run_dir)
+                outcome = _process_dir(run_dir, prune=not args.no_prune)
                 if outcome in ('ok', 'error'):
                     parsed_any = True
 

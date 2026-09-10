@@ -433,6 +433,19 @@ class CloudLabBench:
                 c.run(f'{CommandMaker.cleanup()} || true', hide=True)
                 c.put(main_conf, PathMaker.main_conf_file())
 
+    # Refuse to start a row with less headroom than this. One run writes
+    # roughly 21MB of client log per client process, so a 16-client row
+    # needs ~340MB; 5GB leaves room for several rows plus the parser's
+    # working files. Without this check a full disk surfaced as a cascade
+    # of shutil/OSError [Errno 28] failures mid-sweep, which is far
+    # harder to read than one clear stop.
+    MIN_FREE_BYTES = 5 * 1024 ** 3
+
+    @staticmethod
+    def _free_bytes(path='.'):
+        st = os.statvfs(path)
+        return st.f_bavail * st.f_frsize
+
     def _iface_for(self, ssh_host, peer_ip):
         """Cached netem.discover_iface over the pooled connection."""
         iface = self._iface_cache.get(ssh_host)
@@ -708,6 +721,27 @@ class CloudLabBench:
                         status='NOT_ENOUGH_NODES',
                     )
                     continue
+
+                free = self._free_bytes(PathMaker.run_logs_path()
+                                        if os.path.isdir(
+                                            PathMaker.run_logs_path())
+                                        else '.')
+                if free < self.MIN_FREE_BYTES:
+                    msg = (f'only {free / 1024 ** 3:.1f}GB free, need '
+                           f'{self.MIN_FREE_BYTES / 1024 ** 3:.0f}GB; '
+                           f'run the parser (it prunes raw client logs '
+                           f'after parsing) or clear results/run_logs')
+                    Print.error(BenchError(f'DISK_FULL before {run_id}',
+                                           Exception(msg)))
+                    self._write_row(
+                        output_file, csv_fieldnames, row,
+                        status=f'DISK_FULL: {msg}',
+                    )
+                    self.notifier.notify(
+                        subject='Sweep halted: disk space',
+                        body=msg, throttle_key='disk_full',
+                    )
+                    break
 
                 run_log_dir = os.path.join(
                     PathMaker.run_logs_path(), str(run_id),
