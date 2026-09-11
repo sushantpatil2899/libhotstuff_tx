@@ -70,6 +70,62 @@ def discover_iface(conn, peer_ip):
     )
 
 
+PING_MARK = '@@PING'
+
+
+def ping_command(peer_ips: List[str], count: int = 5,
+                 interval: float = 0.2) -> str:
+    """One shell command that pings every IP in ``peer_ips`` in parallel.
+
+    Each ping writes to its own temp file; only after all have finished
+    are the files printed, one after another, each under a
+    ``@@PING <ip>`` header. An earlier version printed each ping's output
+    from its own background subshell: bash's printf does not emit that
+    in a single write, and on the cluster 1 in 12 probes interleaved,
+    putting one link's statistics under another link's header.
+
+    0.2s is the smallest interval iputils allows without root. ``-W 2``
+    bounds the wait per reply, well above the largest round trip injected
+    here (2 x 200ms).
+    """
+    pings = ' '.join(
+        f'ping -n -q -c {count} -i {interval} -W 2 {ip} > "$d/{ip}" 2>&1 &'
+        for ip in peer_ips)
+    dumps = ' '.join(
+        f'echo "{PING_MARK} {ip}"; cat "$d/{ip}";' for ip in peer_ips)
+    return f'd=$(mktemp -d); {pings} wait; {dumps} rm -rf "$d"'
+
+
+def parse_ping(output: str) -> Dict[str, dict]:
+    """Parse ``ping_command`` output into {ip: stats}.
+
+    stats: sent, received, loss_pct, and min/avg/max/mdev in ms. The four
+    RTT fields are None when no reply arrived, since ping then prints no
+    ``rtt`` line.
+    """
+    out: Dict[str, dict] = {}
+    ip = None
+    for line in output.splitlines():
+        line = line.strip()
+        if line.startswith(PING_MARK):
+            ip = line.split()[1]
+            out[ip] = {'sent': None, 'received': None, 'loss_pct': None,
+                       'min': None, 'avg': None, 'max': None, 'mdev': None}
+        elif ip is None:
+            continue
+        elif 'packets transmitted' in line:
+            f = [x.strip() for x in line.split(',')]
+            out[ip]['sent'] = int(f[0].split()[0])
+            out[ip]['received'] = int(f[1].split()[0])
+            out[ip]['loss_pct'] = float(
+                next(x for x in f if 'packet loss' in x).split('%')[0])
+        elif line.startswith('rtt ') or line.startswith('round-trip'):
+            vals = line.split('=')[1].strip().split()[0].split('/')
+            for k, v in zip(('min', 'avg', 'max', 'mdev'), vals):
+                out[ip][k] = float(v)
+    return out
+
+
 def teardown_command(iface: str) -> str:
     """Idempotent: safe to run even if no qdisc was ever set up."""
     return f'sudo tc qdisc del dev {iface} root 2>/dev/null; true'

@@ -116,6 +116,9 @@ class CloudLabBench:
         # twice per row. Holds only the device name, so it stays valid
         # across _reset_pool().
         self._iface_cache: dict[str, str] = {}
+        # Round trips measured by _probe_rtt for the current row; reset
+        # to None before every row so a stale record can never be saved.
+        self._last_rtt = None
 
     # ------------------------------------------------------------------
     # SSH connection plumbing
@@ -493,6 +496,57 @@ class CloudLabBench:
             for cmd in cmds:
                 c.run(cmd, hide=True)
 
+    RTT_FILE = 'rtt.json'
+
+    def _probe_rtt(self, replica_pairs, client_pairs, network):
+        """Measure the round trip each run actually sees, after tc is set.
+
+        Pings, in parallel from every host: each replica to every other
+        replica, and each client host to every replica. Records beside
+        each measured pair the round trip the tc rules should add:
+        2 x max(lat_a, lat_b) between replicas, since both ends delay
+        their egress to each other; 0 from a client host, since client
+        traffic is never shaped. This is the per-run evidence that the
+        injected delay took effect -- the question the pre-fix netem
+        results could not answer.
+
+        Runs before the replicas boot, so the probe traffic never
+        overlaps the measured window.
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        pairwise = netem.compute_pairwise_delays(network.node_latencies)
+        rep_ip = {i: ip for i, (_, ip) in enumerate(replica_pairs)}
+        jobs = []   # (label, ssh_host, {ip: (dst_index, expected_ms)})
+        for i, (ssh_host, _) in enumerate(replica_pairs):
+            targets = {}
+            for j, ip in rep_ip.items():
+                if j != i:
+                    d = pairwise.get((min(i, j), max(i, j)), 0)
+                    targets[ip] = (j, 2 * d)
+            jobs.append((f'replica{i}', ssh_host, targets))
+        for ssh_host in sorted({h for h, _ in client_pairs}):
+            jobs.append((f'client@{ssh_host}', ssh_host,
+                         {ip: (j, 0) for j, ip in rep_ip.items()}))
+
+        def run(job):
+            label, ssh_host, targets = job
+            r = self._conn(ssh_host).run(
+                netem.ping_command(list(targets)), hide=True, warn=True)
+            return label, targets, netem.parse_ping(r.stdout or '')
+
+        pairs = []
+        with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
+            for label, targets, stats in pool.map(run, jobs):
+                for ip, (dst, expected) in targets.items():
+                    s = stats.get(ip, {})
+                    pairs.append({'src': label, 'dst': f'replica{dst}',
+                                  'dst_ip': ip, 'expected_added_ms': expected,
+                                  **s})
+        return {'node_latencies': {f'lat_node{i}': v for i, v
+                                   in sorted(network.node_latencies.items())},
+                'pairs': pairs}
+
     @retry_on_ssh_error()
     def clear_netem(self, nodes=4):
         """Standalone entry point (see fabfile.py's `clear-netem` task):
@@ -515,6 +569,13 @@ class CloudLabBench:
         all_hosts = sorted({h for h, _ in replica_pairs + client_pairs})
         self.kill(hosts=all_hosts, delete_logs=True)
         self._apply_netem(replica_pairs, network)
+        # A failed probe never fails the run; it is recorded as such and
+        # the run is then flagged by the analysis as lacking evidence.
+        try:
+            self._last_rtt = self._probe_rtt(replica_pairs, client_pairs,
+                                             network)
+        except Exception as e:
+            self._last_rtt = {'error': f'{type(e).__name__}: {e}'}
 
         repo = self.settings.repo_name
 
@@ -765,11 +826,17 @@ class CloudLabBench:
                     continue
 
                 try:
+                    self._last_rtt = None
                     self._run_single(
                         replica_pairs, client_pairs, bench, protocol, network,
                     )
                     self._download_logs(replica_pairs, client_pairs, bench)
                     self._archive_logs(run_log_dir)
+                    # Written before READY, so the parser never sees a
+                    # run dir without its RTT record.
+                    with open(os.path.join(run_log_dir, self.RTT_FILE),
+                              'w') as f:
+                        json.dump(self._last_rtt, f, indent=1)
                     self._mark_log_dir_ready(run_log_dir, run_id)
 
                     self._write_row(
