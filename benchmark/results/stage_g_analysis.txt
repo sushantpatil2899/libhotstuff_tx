@@ -1,0 +1,137 @@
+Stage G: 216 runs parsed, 72 configs
+
+=== 1. block_size 6400 vs 3200, identical other coordinates ===
+  c     ma  t  mtx     bs3200     bs6400    gain  lat3200  lat6400  worst sp  verdict
+  4  16000  2  0.1    381,214    372,537   -2.3%     97.8    169.7      8.8%  not resolvable
+  4  16000  2  0.9    354,040    360,805    1.9%    114.4    176.3      6.9%  not resolvable
+  4  16000  4  0.1    366,473    360,806   -1.5%     84.7    165.4      5.8%  not resolvable
+  4  16000  4  0.9    359,856    349,405   -2.9%    107.9    178.5      8.1%  not resolvable
+  4  16000  8  0.1    361,273    374,420    3.6%     97.1    168.0      4.5%  not resolvable
+  4  16000  8  0.9    351,560    350,688   -0.2%    100.2    176.9      6.7%  not resolvable
+  8   4000  2  0.1    501,998    429,985  -14.3%     63.7     74.6      4.0%  FALLING
+  8   4000  2  0.9    448,095    409,089   -8.7%     71.4     78.3      3.6%  FALLING
+  8   4000  4  0.1    498,034    520,424    4.5%     64.2     62.9      3.3%  RISING
+  8   4000  4  0.9    474,923    477,340    0.5%     67.3     67.1      3.8%  not resolvable
+  8   4000  8  0.1    481,941    516,025    7.1%     66.4     62.1      5.3%  RISING
+  8   4000  8  0.9    459,058    479,267    4.4%     69.7     66.9      2.4%  RISING
+  8  16000  2  0.1    421,889    457,407    8.4%    281.5    261.7      5.3%  RISING
+  8  16000  2  0.9    411,345    426,752    3.7%    266.1    287.4      5.5%  not resolvable
+  8  16000  4  0.1    425,128    462,980    8.9%    258.9    265.7      4.9%  RISING
+  8  16000  4  0.9    421,071    444,945    5.7%    303.5    274.6      7.7%  not resolvable
+  8  16000  8  0.1    447,661    474,061    5.9%    285.5    269.6      5.6%  RISING
+  8  16000  8  0.9    412,951    434,071    5.1%    309.5    289.7      5.3%  not resolvable
+ 16   4000  2  0.1    462,114    487,268    5.4%    138.0    131.1     11.5%  not resolvable
+ 16   4000  2  0.9    411,099    459,559   11.8%    155.1    139.0      3.9%  RISING
+ 16   4000  4  0.1    459,518    487,256    6.0%    138.7    131.1      4.6%  RISING
+ 16   4000  4  0.9    415,681    454,309    9.3%    153.4    140.6      2.5%  RISING
+ 16   4000  8  0.1    447,343    493,638   10.3%    142.5    129.4      5.6%  RISING
+ 16   4000  8  0.9    428,351    451,003    5.3%    148.8    141.7      6.8%  not resolvable
+ 16  16000  2  0.1    409,283    440,320    7.6%    478.0    528.0    110.3%  not resolvable
+ 16  16000  2  0.9     74,517    407,944  447.5%    532.7    431.4    185.6%  not resolvable
+ 16  16000  4  0.1    435,329    443,395    1.9%    522.4    573.1      9.8%  not resolvable
+ 16  16000  4  0.9    413,330    428,238    3.6%    429.8    502.0     12.8%  not resolvable
+ 16  16000  8  0.1    418,701    424,762    1.4%    603.4    524.4      4.0%  not resolvable
+ 16  16000  8  0.9    394,359    412,771    4.7%    611.0    564.6      3.6%  RISING
+  tally: {'not resolvable': 17, 'FALLING': 2, 'RISING': 11}
+
+=== 2. surface at threads=4, mtx=0.9 (tps / mean lat ms / spread) ===
+  bs3200  c4   ma4000      331,193    48.4 ms   2.5%   D3 median 323,125 (+2.5%)
+  bs3200  c4   ma16000     359,856   107.9 ms   2.2%   D3 median 349,208 (+3.0%)
+  bs3200  c8   ma4000      474,923    67.3 ms   3.8%   D3 median 459,963 (+3.3%)
+  bs3200  c8   ma16000     421,071   303.5 ms   5.3%   D3 median 405,707 (+3.8%)
+  bs3200  c16  ma1000      482,211    33.3 ms   3.4%   D3 median 481,322 (+0.2%)
+  bs3200  c16  ma4000      415,681   153.4 ms   2.5%   D3 median 416,446 (-0.2%)
+  bs3200  c16  ma16000     413,330   429.8 ms  12.8%   D3 median 382,940 (+7.9%)
+  bs6400  c4   ma16000     349,405   178.5 ms   8.1%
+  bs6400  c8   ma4000      477,340    67.1 ms   1.5%
+  bs6400  c8   ma16000     444,945   274.6 ms   7.7%
+  bs6400  c16  ma4000      454,309   140.6 ms   0.6%
+  bs6400  c16  ma16000     428,238   502.0 ms   3.2%
+
+=== 3. threads 2/4/8 within each (bs, c, ma, mtx) ===
+  bs3200 c4  ma4000  mtx0.1  t2   352,214/45.5  t4   334,528/47.9  t8   338,359/47.3   sep 5.2% vs 7.8%  not resolvable
+  bs3200 c4  ma4000  mtx0.9  t2   333,600/48.0  t4   331,193/48.4  t8   323,596/49.5   sep 3.0% vs 2.9%  RESOLVABLE
+  bs3200 c4  ma16000 mtx0.1  t2   381,214/97.8  t4   366,473/84.7  t8   361,273/97.1   sep 5.4% vs 8.8%  not resolvable
+  bs3200 c4  ma16000 mtx0.9  t2   354,040/114.4  t4   359,856/107.9  t8   351,560/100.2   sep 2.3% vs 6.7%  not resolvable
+  bs3200 c8  ma4000  mtx0.1  t2   501,998/63.7  t4   498,034/64.2  t8   481,941/66.4   sep 4.1% vs 5.3%  not resolvable
+  bs3200 c8  ma4000  mtx0.9  t2   448,095/71.4  t4   474,923/67.3  t8   459,058/69.7   sep 5.8% vs 3.8%  RESOLVABLE
+  bs3200 c8  ma16000 mtx0.1  t2   421,889/281.5  t4   425,128/258.9  t8   447,661/285.5   sep 6.0% vs 5.3%  RESOLVABLE
+  bs3200 c8  ma16000 mtx0.9  t2   411,345/266.1  t4   421,071/303.5  t8   412,951/309.5   sep 2.3% vs 5.3%  not resolvable
+  bs3200 c16 ma1000  mtx0.1  t2   380,935/42.1  t4   536,975/29.9  t8   522,656/30.7   sep 32.5% vs 67.8%  not resolvable
+  bs3200 c16 ma1000  mtx0.9  t2   371,442/43.2  t4   482,211/33.3  t8   477,952/33.6   sep 25.0% vs 58.3%  not resolvable
+  bs3200 c16 ma4000  mtx0.1  t2   462,114/138.0  t4   459,518/138.7  t8   447,343/142.5   sep 3.2% vs 7.6%  not resolvable
+  bs3200 c16 ma4000  mtx0.9  t2   411,099/155.1  t4   415,681/153.4  t8   428,351/148.8   sep 4.1% vs 6.8%  not resolvable
+  bs3200 c16 ma16000 mtx0.1  t2   409,283/478.0  t4   435,329/522.4  t8   418,701/603.4   sep 6.2% vs 110.3%  not resolvable
+  bs3200 c16 ma16000 mtx0.9  t2    74,517/532.7  t4   413,330/429.8  t8   394,359/611.0   sep 115.2% vs 185.6%  not resolvable
+  bs6400 c4  ma16000 mtx0.1  t2   372,537/169.7  t4   360,806/165.4  t8   374,420/168.0   sep 3.7% vs 2.2%  RESOLVABLE
+  bs6400 c4  ma16000 mtx0.9  t2   360,805/176.3  t4   349,405/178.5  t8   350,688/176.9   sep 3.2% vs 8.1%  not resolvable
+  bs6400 c8  ma4000  mtx0.1  t2   429,985/74.6  t4   520,424/62.9  t8   516,025/62.1   sep 18.5% vs 4.0%  RESOLVABLE
+  bs6400 c8  ma4000  mtx0.9  t2   409,089/78.3  t4   477,340/67.1  t8   479,267/66.9   sep 15.4% vs 3.6%  RESOLVABLE
+  bs6400 c8  ma16000 mtx0.1  t2   457,407/261.7  t4   462,980/265.7  t8   474,061/269.6   sep 3.6% vs 5.6%  not resolvable
+  bs6400 c8  ma16000 mtx0.9  t2   426,752/287.4  t4   444,945/274.6  t8   434,071/289.7   sep 4.2% vs 7.7%  not resolvable
+  bs6400 c16 ma4000  mtx0.1  t2   487,268/131.1  t4   487,256/131.1  t8   493,638/129.4   sep 1.3% vs 11.5%  not resolvable
+  bs6400 c16 ma4000  mtx0.9  t2   459,559/139.0  t4   454,309/140.6  t8   451,003/141.7   sep 1.9% vs 5.8%  not resolvable
+  bs6400 c16 ma16000 mtx0.1  t2   440,320/528.0  t4   443,395/573.1  t8   424,762/524.4   sep 4.3% vs 4.0%  RESOLVABLE
+  bs6400 c16 ma16000 mtx0.9  t2   407,944/431.4  t4   428,238/502.0  t8   412,771/564.6   sep 4.9% vs 75.4%  not resolvable
+
+=== 4. write ratio 0.1 vs 0.9 within each (bs, c, ma, t) ===
+  bs3200 c4  ma4000  t2  10%w   352,214/45.5  90%w   333,600/48.0  +5.6%  sep 5.4% vs 7.8%  not resolvable
+  bs3200 c4  ma4000  t4  10%w   334,528/47.9  90%w   331,193/48.4  +1.0%  sep 1.0% vs 2.5%  not resolvable
+  bs3200 c4  ma4000  t8  10%w   338,359/47.3  90%w   323,596/49.5  +4.6%  sep 4.5% vs 2.5%  RESOLVABLE
+  bs3200 c4  ma16000 t2  10%w   381,214/97.8  90%w   354,040/114.4  +7.7%  sep 7.4% vs 8.8%  not resolvable
+  bs3200 c4  ma16000 t4  10%w   366,473/84.7  90%w   359,856/107.9  +1.8%  sep 1.8% vs 5.8%  not resolvable
+  bs3200 c4  ma16000 t8  10%w   361,273/97.1  90%w   351,560/100.2  +2.8%  sep 2.7% vs 6.7%  not resolvable
+  bs3200 c8  ma4000  t2  10%w   501,998/63.7  90%w   448,095/71.4  +12.0%  sep 11.3% vs 3.4%  RESOLVABLE
+  bs3200 c8  ma4000  t4  10%w   498,034/64.2  90%w   474,923/67.3  +4.9%  sep 4.8% vs 3.8%  RESOLVABLE
+  bs3200 c8  ma4000  t8  10%w   481,941/66.4  90%w   459,058/69.7  +5.0%  sep 4.9% vs 5.3%  not resolvable
+  bs3200 c8  ma16000 t2  10%w   421,889/281.5  90%w   411,345/266.1  +2.6%  sep 2.5% vs 5.3%  not resolvable
+  bs3200 c8  ma16000 t4  10%w   425,128/258.9  90%w   421,071/303.5  +1.0%  sep 1.0% vs 5.3%  not resolvable
+  bs3200 c8  ma16000 t8  10%w   447,661/285.5  90%w   412,951/309.5  +8.4%  sep 8.1% vs 5.3%  RESOLVABLE
+  bs3200 c16 ma1000  t2  10%w   380,935/42.1  90%w   371,442/43.2  +2.6%  sep 2.5% vs 3.8%  not resolvable
+  bs3200 c16 ma1000  t4  10%w   536,975/29.9  90%w   482,211/33.3  +11.4%  sep 10.7% vs 3.4%  RESOLVABLE
+  bs3200 c16 ma1000  t8  10%w   522,656/30.7  90%w   477,952/33.6  +9.4%  sep 8.9% vs 67.8%  not resolvable
+  bs3200 c16 ma4000  t2  10%w   462,114/138.0  90%w   411,099/155.1  +12.4%  sep 11.7% vs 7.6%  RESOLVABLE
+  bs3200 c16 ma4000  t4  10%w   459,518/138.7  90%w   415,681/153.4  +10.5%  sep 10.0% vs 4.6%  RESOLVABLE
+  bs3200 c16 ma4000  t8  10%w   447,343/142.5  90%w   428,351/148.8  +4.4%  sep 4.3% vs 6.8%  not resolvable
+  bs3200 c16 ma16000 t2  10%w   409,283/478.0  90%w    74,517/532.7  +449.2%  sep 138.4% vs 185.6%  not resolvable
+  bs3200 c16 ma16000 t4  10%w   435,329/522.4  90%w   413,330/429.8  +5.3%  sep 5.2% vs 12.8%  not resolvable
+  bs3200 c16 ma16000 t8  10%w   418,701/603.4  90%w   394,359/611.0  +6.2%  sep 6.0% vs 2.2%  RESOLVABLE
+  bs6400 c4  ma16000 t2  10%w   372,537/169.7  90%w   360,805/176.3  +3.3%  sep 3.2% vs 6.9%  not resolvable
+  bs6400 c4  ma16000 t4  10%w   360,806/165.4  90%w   349,405/178.5  +3.3%  sep 3.2% vs 8.1%  not resolvable
+  bs6400 c4  ma16000 t8  10%w   374,420/168.0  90%w   350,688/176.9  +6.8%  sep 6.5% vs 1.8%  RESOLVABLE
+  bs6400 c8  ma4000  t2  10%w   429,985/74.6  90%w   409,089/78.3  +5.1%  sep 5.0% vs 4.0%  RESOLVABLE
+  bs6400 c8  ma4000  t4  10%w   520,424/62.9  90%w   477,340/67.1  +9.0%  sep 8.6% vs 3.3%  RESOLVABLE
+  bs6400 c8  ma4000  t8  10%w   516,025/62.1  90%w   479,267/66.9  +7.7%  sep 7.4% vs 3.0%  RESOLVABLE
+  bs6400 c8  ma16000 t2  10%w   457,407/261.7  90%w   426,752/287.4  +7.2%  sep 6.9% vs 5.5%  RESOLVABLE
+  bs6400 c8  ma16000 t4  10%w   462,980/265.7  90%w   444,945/274.6  +4.1%  sep 4.0% vs 7.7%  not resolvable
+  bs6400 c8  ma16000 t8  10%w   474,061/269.6  90%w   434,071/289.7  +9.2%  sep 8.8% vs 5.6%  RESOLVABLE
+  bs6400 c16 ma4000  t2  10%w   487,268/131.1  90%w   459,559/139.0  +6.0%  sep 5.9% vs 11.5%  not resolvable
+  bs6400 c16 ma4000  t4  10%w   487,256/131.1  90%w   454,309/140.6  +7.3%  sep 7.0% vs 3.2%  RESOLVABLE
+  bs6400 c16 ma4000  t8  10%w   493,638/129.4  90%w   451,003/141.7  +9.5%  sep 9.0% vs 5.8%  RESOLVABLE
+  bs6400 c16 ma16000 t2  10%w   440,320/528.0  90%w   407,944/431.4  +7.9%  sep 7.6% vs 75.4%  not resolvable
+  bs6400 c16 ma16000 t4  10%w   443,395/573.1  90%w   428,238/502.0  +3.5%  sep 3.5% vs 4.0%  not resolvable
+  bs6400 c16 ma16000 t8  10%w   424,762/524.4  90%w   412,771/564.6  +2.9%  sep 2.9% vs 4.0%  not resolvable
+
+=== 5. throughput/latency frontier (no config has both higher tps and lower latency) ===
+  bs3200 c16 ma1000 t4 mtx0.1             536,975    29.9 ms  p95 31.8  p99 35.4  spread 1.1%
+
+  top 10 by median tps:
+  bs3200 c16 ma1000 t4 mtx0.1             536,975    29.9 ms  spread 1.1%
+  bs3200 c16 ma1000 t8 mtx0.1             522,656    30.7 ms  spread 67.8%
+  bs6400 c8 ma4000 t4 mtx0.1              520,424    62.9 ms  spread 3.3%
+  bs6400 c8 ma4000 t8 mtx0.1              516,025    62.1 ms  spread 3.0%
+  bs3200 c8 ma4000 t2 mtx0.1              501,998    63.7 ms  spread 3.4%
+  bs3200 c8 ma4000 t4 mtx0.1              498,034    64.2 ms  spread 2.2%
+  bs6400 c16 ma4000 t8 mtx0.1             493,638   129.4 ms  spread 4.2%
+  bs6400 c16 ma4000 t2 mtx0.1             487,268   131.1 ms  spread 11.5%
+  bs6400 c16 ma4000 t4 mtx0.1             487,256   131.1 ms  spread 3.2%
+  bs3200 c16 ma1000 t4 mtx0.9             482,211    33.3 ms  spread 3.4%
+
+=== 6. lowest run / cell median ===
+  0.206  bs3200 c16 ma16000 t2 mtx0.1  runs [84180, 409283, 420198]
+  0.426  bs6400 c16 ma16000 t2 mtx0.9  runs [173657, 407944, 427044]
+  0.467  bs3200 c16 ma1000 t8 mtx0.1  runs [244051, 522656, 539096]
+  0.518  bs3200 c16 ma1000 t8 mtx0.9  runs [247447, 477952, 482274]
+  0.852  bs3200 c16 ma16000 t2 mtx0.9  runs [63459, 74517, 390383]
+
+rep spread over 72 configs: median 3.8%, max 185.6%

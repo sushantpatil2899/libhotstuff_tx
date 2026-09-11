@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
 """Stage F: 7-rep confirmation of the Stage E effects.
 
-Reports medians, and re-tests each comparison with the separation judged
-against the rep spread of the cells involved.
+Reports medians, and re-tests each comparison two ways:
+
+  range rule   separation of medians vs the worst (max-min)/mean of the
+               cells involved -- the rule used for Stages A-E. The range
+               of n samples widens as n grows, so this rule tightens as
+               reps are added and is not comparable between 3 and 7 reps.
+  rank test    exact two-sided Mann-Whitney U over all C(14,7) = 3,432
+               splits of the two cells' runs. A comparison is confirmed
+               when p < 0.05 / (number of comparisons made).
 """
+from itertools import combinations
 import glob
 import json
 import re
@@ -52,7 +60,8 @@ for k in sorted(F):
 print('\n=== comparisons re-tested on 7-rep medians ===')
 
 
-def compare(label, keys):
+def compare(label, keys, level):
+    # level: index into the key tuple of the factor being varied
     got = [(k, agg(F[k])) for k in keys if k in F]
     if len(got) < 2:
         print(f'  {label}: insufficient data')
@@ -63,17 +72,57 @@ def compare(label, keys):
     verdict = 'CONFIRMED' if sep > worst else 'NOT resolvable at 7 reps'
     print(f'\n  {label}')
     for k, (m, lat, sp, n) in got:
-        lv = k[1] if 't' in label else (k[2] if 'skew' in label else k[3])
+        lv = k[level]
         print(f'     {str(lv):<6}{m:>11,.0f}{lat:>9.1f} ms   spread {sp:.1f}%')
     print(f'     separation {sep:.1f}% vs worst spread {worst:.1f}%'
           f'  -> {verdict}')
 
 
-compare('B3 threads (t)', [('B3', t, '0.1', '0.9') for t in (2, 4, 8)])
-compare('B3 skew', [('B3', 4, s, '0.9') for s in ('0.1', '0.9')])
+compare('B3 threads (t)', [('B3', t, '0.1', '0.9') for t in (2, 4, 8)], 1)
+compare('B3 skew', [('B3', 4, s, '0.9') for s in ('0.1', '0.9')], 2)
 for b in ('B1', 'B2', 'B4'):
     compare(f'{b} write ratio (mtx)',
-            [(b, 4, '0.1', m) for m in ('0.1', '0.5', '0.9')])
+            [(b, 4, '0.1', m) for m in ('0.1', '0.5', '0.9')], 3)
+
+
+
+def mann_whitney(a, b):
+    """Exact two-sided Mann-Whitney U by full enumeration."""
+    def u(x, y):
+        return sum((i > j) + 0.5 * (i == j) for i in x for j in y)
+    pool, n = a + b, len(a)
+    mu = n * len(b) / 2
+    obs = abs(u(a, b) - mu)
+    hits = tot = 0
+    for idx in combinations(range(len(pool)), n):
+        chosen = set(idx)
+        x = [pool[i] for i in idx]
+        y = [pool[i] for i in range(len(pool)) if i not in chosen]
+        tot += 1
+        hits += abs(u(x, y) - mu) >= obs - 1e-9
+    return u(a, b), hits / tot
+
+
+PAIRS = [(('B3', 2, '0.1', '0.9'), ('B3', 4, '0.1', '0.9')),
+         (('B3', 4, '0.1', '0.9'), ('B3', 8, '0.1', '0.9')),
+         (('B3', 2, '0.1', '0.9'), ('B3', 8, '0.1', '0.9')),
+         (('B3', 4, '0.1', '0.9'), ('B3', 4, '0.9', '0.9'))]
+for b in ('B1', 'B2', 'B4'):
+    PAIRS += [((b, 4, '0.1', x), (b, 4, '0.1', y))
+              for x, y in (('0.1', '0.9'), ('0.1', '0.5'), ('0.5', '0.9'))]
+ALPHA = 0.05 / len(PAIRS)
+
+print(f'\n=== rank test: exact Mann-Whitney, {len(PAIRS)} comparisons, '
+      f'confirm at p < 0.05/{len(PAIRS)} = {ALPHA:.4f} ===')
+for ka, kb in PAIRS:
+    a = [x[0] for x in F[ka]]
+    b = [x[0] for x in F[kb]]
+    uu, p = mann_whitney(a, b)
+    overlap = 'no' if min(a) > max(b) or min(b) > max(a) else 'yes'
+    name = (f'{ka[0]} t{ka[1]} skew{ka[2]} mtx{ka[3]} vs '
+            f't{kb[1]} skew{kb[2]} mtx{kb[3]}')
+    print(f'  {name:<44} U={uu:>4.0f}  p={p:.4f}  overlap={overlap:<3}  '
+          f'{"CONFIRMED" if p < ALPHA else "not confirmed"}')
 
 print('\n=== highest single cell in Stage F ===')
 best = max(F.items(), key=lambda kv: agg(kv[1])[0])

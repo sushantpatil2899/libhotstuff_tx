@@ -8,7 +8,12 @@ Reservation: CloudLab Utah Exp-3, `d6515`. 4 replicas (node1 = fixed
 proposer), 1 dedicated client host (node4, 64 cores), node5 as
 orchestrator. 60s runs, no injected network latency.
 
-Totals: 492 runs across five sweeps, 0 run errors, 0 parse failures.
+Totals: 923 runs across nine sweeps. Stage F lost 7 rows to a full
+orchestrator disk; they were re-run. 20 Stage F parses failed for the
+same reason and were re-parsed from intact logs. Stage G logged two
+transient orchestrator SSH errors: one status-poll connection and one
+pre-run cleanup that succeeded on retry. Both rows completed, and each
+matched its sibling reps. No other run errors or parse failures.
 
 ---
 
@@ -37,12 +42,37 @@ Distribution of rep spread over the 87 Stage D3 cells: **median 3.8%,
 p90 15.1%, max 112.4%**. Most of the surface is tight; a tail of nine
 cells is not.
 
+### 1b. Comparing two configurations at 7 reps
+
+The rep-spread rule above (a difference must exceed the spread of the
+cells compared) was used for every 3-rep comparison in Stages A-E. It
+is not used for 7-rep verdicts, because the spread is a range, and the
+range of a sample widens as samples are added. Measured directly: B3 at
+its baseline settings had a spread of **3.0% over 3 reps and 9.8% over
+7**. Under that rule, adding reps makes a difference *harder* to
+confirm, and 3-rep and 7-rep verdicts are not comparable.
+
+Stage F verdicts therefore use an exact two-sided Mann-Whitney rank
+test. It pools the 14 runs of the two cells and counts, over all 3,432
+ways of dividing them into two groups of 7, how often the division is
+at least as lopsided as the one measured. That fraction is `p`. Stage F
+made 13 comparisons, so a comparison is **confirmed only at
+p < 0.05 / 13 = 0.0038**. Both the range-rule and rank-test results are
+printed by `analyse_stage_f.py`.
+
+Throughout sections 9 and 10, **median** is the middle value of the
+reps of a cell, and latency figures are medians over reps of each run's
+mean, p95 and p99 commit latency.
+
 ---
 
 ## 2. Headline result
 
 **Peak measured: 459,342 tps** at `block_size=3200, clients=8,
-max_async=4000`, mean latency 69.6 ms, rep spread 1.3%.
+max_async=4000`, mean latency 69.6 ms, rep spread 1.3%. That is at 90%
+writes, the write ratio of the whole Stage D3 grid. At the same
+configuration with 10% writes, Stage F measured **492,320 tps** at
+65.0 ms (7-rep median, section 9.4).
 
 That is **5.0x** the best single-client figure ever recorded here
 (90,770). Stages A, B and C measured a single client across 41 cells,
@@ -64,6 +94,12 @@ reps where re-run, 3 otherwise.
 | **B2** mid | 800 | 4 | 1,000 | 310,922 | 12.9 ms | 4.6% |
 | **B3** recommended | 1600 | 8 | 1,000 | **446,133** | **18.0 ms** | **0.9%** |
 | **B4** max throughput | 3200 | 8 | 4,000 | 459,963 | 69.5 ms | 1.3% |
+
+These four were selected from Stage D3, which ran only at threads=4,
+`skew`=0.1, `mtx`=0.9. Stage F re-measured each at those settings over 7
+reps: B1 165,125 tps / 12.1 ms, B2 301,718 / 13.3 ms, B3 444,759 /
+18.0 ms, B4 459,790 / 69.6 ms. The thread count and write ratio that
+measured best at each baseline are in section 10.
 
 **Every frontier cell sits at `max_async = 1,000` except B4** -- the
 lowest level tested. Raising `max_async` past that costs latency without
@@ -117,6 +153,12 @@ latency. Their behaviour elsewhere is untested.
 `sb_skew_factor` (0.1, 0.5, 0.9) gave an 8.3% separation,
 non-monotonic, against a 9.3% worst-case spread — not resolvable
 either way.
+
+**Superseded at the baselines.** Stages E and F re-measured threads,
+skew and write ratio at B1-B4 (section 9). There, threads have a
+confirmed effect at B3 and write ratio a confirmed effect at B2. The
+Stage A bounds above hold only for the single-client point they were
+measured at.
 
 ### 3.2 `block_size`
 
@@ -253,6 +295,10 @@ because saturation was already observed to depend on location
 modest `max_async`. `clients` and `max_async` do not warrant
 extension** on this data.
 
+**Done in Stages G and H (section 11).** 6400 raised throughput at some
+high-client slices, confirmed at 7 reps at 16 clients / `ma`=4,000
+(+5.8%). No 6400 configuration displaced a baseline.
+
 ### Qualification on the `clients` verdict
 
 The largest observed 16-vs-8 gain was **+41.9%**, at `bs=3200,
@@ -316,7 +362,17 @@ logs: `ncmds` equalled the configured value in every block across
 5. What causes the collapsed runs described in section 8 -- individual
    repetitions landing at a fraction of the other runs of the same
    configuration, in cells that are otherwise tight. More repetitions
-   exposed more of them rather than reducing them.
+   exposed more of them rather than reducing them. None occurred in
+   Stages E and F: across 187 runs the lowest run was 0.93x the median
+   of its cell. They reappeared in Stage G (6 of 216 runs) and Stage H
+   (1 of 28), every one at 16 clients (section 11.5).
+6. Why 2 threads costs 8.2% throughput at B3, while no thread effect was
+   detected at B1, B2 or B4 (3 reps there; section 9.1). In Stage G it
+   cost 14-23% in some configurations and nothing in others (section
+   11.3).
+7. The latency observations in section 11.5: the two latency groups at
+   16 clients / `ma`=16,000, mean latency below median at 4 clients /
+   `ma`=16,000, and single runs at half the latency of their siblings.
 
 ---
 
@@ -362,27 +418,289 @@ about where they were observed, not a mechanism.
 
 ---
 
-## 9. Pending
+## 9. Threads, skew and write ratio at the baselines (Stages E and F)
 
-**Stage E (running):** threads, `sb_skew_factor` and
-`sb_prob_choose_mtx` re-tested at each of the four baselines in section
-2b. Stage A bounded all three below ~4.5% but measured them only at
-`bs=200, ma=2000`, single client, ~85k tps. The baselines run
-167k-460k with 2-8 clients, so that bound does not carry over.
-32 configs x 3 reps = 96 runs, `stage_e.csv`, results to
-`results/stage_e_results.csv`.
+**Stage E:** 32 configs x 3 reps = 96 runs. At each baseline, one
+factor at a time was varied away from threads=4, `skew`=0.1, `mtx`=0.9:
+threads 2/4/8/16, skew 0.1/0.5/0.9, `mtx` 0.1/0.5/0.9. `mtx` is the
+probability that a transaction is a modifying one, so 0.1 = 10% writes
+and 0.9 = 90% writes. Verdicts by the rep-spread rule (section 1).
 
-**Not yet run:** `block_size` extension to 6400 at 8 and 16 clients with
-`max_async` 4,000-16,000, which is what section 5 indicates.
+**Stage F:** 13 configs x 7 reps = 91 runs. It covered every comparison
+Stage E found resolvable, plus B4 write ratio. Verdicts by the rank test
+(section 1b).
+
+### 9.1 Threads
+
+Stage E, tps median of 3 reps, `skew`=0.1, `mtx`=0.9:
+
+| | 2 | 4 | 8 | 16 | separation vs worst spread |
+|---|---|---|---|---|---|
+| B1 | 167,832 | 163,305 | 165,343 | 167,143 | 2.7% vs 5.1% -- not resolvable |
+| B2 | 316,446 | 304,673 | 315,449 | 304,996 | 3.8% vs 6.5% -- not resolvable |
+| B3 | 405,067 | 441,427 | 441,296 | 438,750 | 8.4% vs 6.4% -- resolvable |
+| B4 | 457,039 | 462,033 | 456,388 | 460,776 | 1.2% vs 10.3% -- not resolvable |
+
+Stage F, B3, 7 reps each:
+
+| threads | runs (tps, sorted) | median | mean lat | p95 | p99 |
+|---|---|---|---|---|---|
+| 2 | 392,181 398,332 401,017 408,146 409,193 409,575 413,105 | 408,146 | 19.6 | 22.4 | 25.0 |
+| 4 | 416,915 431,922 432,474 444,759 446,757 449,159 460,137 | 444,759 | 18.0 | 21.5 | 26.0 |
+| 8 | 430,104 434,606 435,502 440,369 440,552 446,972 451,924 | 440,369 | 18.2 | 21.7 | 27.1 |
+
+Rank test: 2 vs 4 p = 0.0006, 2 vs 8 p = 0.0006 -- **confirmed**; no
+run at 2 threads reached the lowest run at 4 or 8. 4 vs 8 p = 1.00.
+
+**Finding:** at B3, 2 threads gives 8.2% lower throughput and 1.6 ms
+higher mean latency than 4. 4 and 8 are indistinguishable, and 16
+matched them in Stage E. At B1, B2 and B4, no thread effect was
+detected over 2-16. Those three were measured at 3 reps only; this is
+not a demonstration that no effect exists there.
+
+### 9.2 Write ratio
+
+tps median, threads=4, `skew`=0.1:
+
+| | Stage E: 10% / 50% / 90% writes | Stage F: 10% / 50% / 90% writes |
+|---|---|---|
+| B1 | 173,801 / 169,479 / 163,305 | 171,070 / 168,766 / 165,125 |
+| B2 | 322,705 / 299,811 / 304,673 | 320,475 / 311,710 / 301,718 |
+| B3 | 446,900 / 442,503 / 441,427 | not re-run |
+| B4 | 477,501 / 483,766 / 462,033 | 492,320 / 471,657 / 459,790 |
+
+Stage F latency, 10% -> 90% writes: B1 mean 11.7 -> 12.1 ms, B2
+12.5 -> 13.3 ms, B4 65.0 -> 69.6 ms (p95 72.5 -> 76.2, p99
+86.2 -> 93.1).
+
+Stage F rank tests, 10% vs 90% writes: B1 p = 0.053, **B2 p = 0.0023
+(confirmed)**, B4 p = 0.011. At B4, 5 of the 7 runs at 90% writes fall
+below every run at 10% writes; the remaining two (480,156 and 498,825)
+fall inside the 10% range.
+
+**Finding:** at B1, B2 and B4, the 10%-write configuration had the
+higher median throughput in all six comparisons across both stages, by
+3.3-7.1%, with lower mean latency in every Stage F case. This is
+confirmed at B2 only: +6.2% throughput, -0.8 ms mean latency. At B1 and
+B4 the difference does not clear the confirmation threshold. At B3 no
+difference was resolved (1.2% separation against an 8.7% spread,
+3 reps).
+
+B2's Stage E ordering was non-monotonic (50% below 90%). At 7 reps it
+is monotonic: 320,475 > 311,710 > 301,718.
+
+### 9.3 Skew
+
+No skew comparison was resolvable at any baseline. Stage E separations:
+B1 4.1% vs 7.6%, B2 2.0% vs 10.0%, B4 1.3% vs 8.3%. B3 cleared the
+rule by half a point in Stage E (+3.1%, 3.9% vs 3.4%). In Stage F it
+measured +1.3% (444,759 vs 450,539), rank test p = 0.13 -- **not
+confirmed**.
+
+### 9.4 Stage E against Stage F
+
+All 13 Stage F medians fall within +/-4.0% of the Stage E value for
+the same configuration. The single largest Stage E figure, 483,766 tps
+(B4, 50% writes), measured 471,657 over 7 reps. The highest Stage F
+cell is B4 at 10% writes: **492,320 tps, 65.0 ms mean latency**.
+
+---
+
+## 10. Best-measured thread count and write ratio per baseline
+
+Selection rule: for each baseline, take the level with the highest
+median throughput. Where no level is resolvably better, keep threads=4,
+the level with the most runs (7 in Stage F) at every baseline. The
+**basis** column states which of these applies.
+
+| | config | threads | write ratio | tps | mean lat | p95 | p99 | basis |
+|---|---|---|---|---|---|---|---|---|
+| **B1** | bs200 c2 ma1000 | 4 | 10% | 171,070 | 11.7 | 14.1 | 15.8 | threads: no effect detected. 10% writes: highest median in both stages, not confirmed (p = 0.053) |
+| **B2** | bs800 c4 ma1000 | 4 | 10% | 320,475 | 12.5 | 14.7 | 17.4 | threads: no effect detected. 10% writes: **confirmed** (p = 0.0023) |
+| **B3** | bs1600 c8 ma1000 | 4 (or 8) | 10% | 446,900 | 17.9 | 21.6 | 26.2 | threads: **2 confirmed worse**, 4 = 8. Write ratio: no difference resolved; 10% highest median, 3 reps only |
+| **B4** | bs3200 c8 ma4000 | 4 | 10% | 492,320 | 65.0 | 72.5 | 86.2 | threads: no effect detected. 10% writes: highest median in both stages, not confirmed (p = 0.011) |
+
+B1, B2 and B4 figures are Stage F 7-rep medians. B3's is a Stage E 3-rep
+median, because B3 at 10% writes was not in Stage F. B3 at 90% writes,
+7 reps: 444,759 tps, 18.0 / 21.5 / 26.0 ms.
+
+In the data behind this table (Stage F for B1, B2, B4; Stage E for B3),
+the 10%-write row was also the lowest in mean latency among the write
+ratios measured at every baseline. The one exception anywhere is Stage E
+at B4, where 50% writes measured 66.1 ms against 67.0 ms. Throughput and latency
+did not trade off along this axis.
+
+**Scope.** The four baselines were selected in Stage D3 at 90% writes.
+Whether the same four cells form the throughput/latency frontier at 10%
+writes is untested.
+
+### 10b. Adopted settings
+
+Decision: **threads = 4 and 90% writes (`mtx` = 0.9) at all four
+baselines**, with `skew` = 0.1 and `sb_users` = 1e6 unchanged. 10%
+writes measured faster, but it was not adopted, because:
+
+- write ratio defines the workload being benchmarked; it is not a
+  system setting;
+- 0.9 is the default in `hotstuff_app.cpp`, `hotstuff_client.cpp` and
+  the harness `config.py`;
+- every Stage D3 figure, and the frontier the baselines were selected
+  from, is at 0.9. The frontier at 0.1 is untested.
+
+Adopted baselines, Stage F 7-rep medians:
+
+| | block_size | clients | max_async | threads | writes | tps | mean lat | p95 | p99 |
+|---|---|---|---|---|---|---|---|---|---|
+| **B1** | 200 | 2 | 1,000 | 4 | 90% | 165,125 | 12.1 | 14.4 | 16.2 |
+| **B2** | 800 | 4 | 1,000 | 4 | 90% | 301,718 | 13.3 | 15.5 | 17.3 |
+| **B3** | 1600 | 8 | 1,000 | 4 | 90% | 444,759 | 18.0 | 21.5 | 26.0 |
+| **B4** | 3200 | 8 | 4,000 | 4 | 90% | 459,790 | 69.6 | 76.2 | 93.1 |
+
+These are the settings future experiments, including the
+network-latency re-run, start from.
+
+---
+
+## 11. Block size extension to 6400 (Stages G and H)
+
+**Stage G:** `block_size` 3200/6400 x clients 4/8/16 x `max_async`
+1,000/4,000/16,000 x threads 2/4/8 x writes 10%/90%, skew 0.1. Only
+cells with `clients x max_async >= 5 x block_size` were run: 7 at 3200
+and 5 at 6400. At 6400, `max_async`=1,000 is illegal at every client
+count tested. 72 configs x 3 reps = 216 runs, in rep-major order,
+shuffled with a fixed seed. Verdicts by the rep-spread rule (section 1).
+
+**Stage H:** 7-rep check of the two Stage G results worth confirming.
+4 cells x 7 reps = 28 runs at the adopted settings (threads 4, 90%
+writes). Verdicts by the rank test; four tests, so confirmed at
+p < 0.05 / 4 = 0.0125.
+
+### 11.1 6400 against 3200
+
+Stage G, 30 pairs at identical clients, `max_async`, threads and write
+ratio:
+
+| result | pairs | where |
+|---|---|---|
+| 6400 higher | 11 | only at 8 and 16 clients, +4.4% to +11.8% |
+| 6400 lower | 2 | 8 clients, `ma`=4,000, 2 threads: -14.3%, -8.7% |
+| not resolvable | 17 | including all 6 pairs at 4 clients |
+
+At the adopted settings (threads 4, 90% writes), Stage G medians:
+
+| clients / `max_async` | bs3200 | bs6400 | change | mean latency 3200 -> 6400 |
+|---|---|---|---|---|
+| 4 / 16,000 | 359,856 | 349,405 | -2.9%, not resolvable | 107.9 -> 178.5 ms |
+| 8 / 4,000 | 474,923 | 477,340 | +0.5%, not resolvable | 67.3 -> 67.1 ms |
+| 8 / 16,000 | 421,071 | 444,945 | +5.7%, not resolvable | 303.5 -> 274.6 ms |
+| 16 / 4,000 | 415,681 | 454,309 | **+9.3%, resolvable** | 153.4 -> 140.6 ms |
+| 16 / 16,000 | 413,330 | 428,238 | +3.6%, not resolvable | 429.8 -> 502.0 ms |
+
+Stage H, 16 clients / `ma`=4,000, 7 reps:
+
+| | runs (tps, sorted) | median | mean lat | p99 |
+|---|---|---|---|---|
+| bs6400 | 431,705 439,829 443,125 446,653 454,408 457,068 457,989 | **446,653** | 143.1 | 150.9 |
+| bs3200 | 404,370 411,180 420,945 422,144 422,207 423,522 424,730 | 422,144 | 151.0 | 168.9 |
+
+Throughput +5.8%, p = 0.0006 -- **confirmed**. Every 6400 run exceeded
+every 3200 run. Mean latency 143.1 vs 151.0 ms, p = 0.026 -- not
+confirmed.
+
+**Finding:** at 16 clients / `ma`=4,000, 6400 gives 5.8% more
+throughput than 3200. B4, measured in the same stage, has both higher
+throughput and lower latency than that configuration: 461,222 tps at
+69.3 ms against 446,653 at 143.1 ms. At the adopted settings, no 6400
+configuration in Stage G exceeded the highest 3200 configuration
+(section 11.2).
+
+### 11.2 bs3200 / 16 clients / `ma`=1,000 against B4
+
+Stage G ranked this configuration highest at the adopted settings:
+482,211 tps at 33.3 ms, runs 474,820 / 482,211 / 491,391 (spread 3.4%),
+against B4 at 474,923 and 67.3 ms. Stage H, 7 reps:
+
+| | runs (tps / mean latency ms, sorted) | median |
+|---|---|---|
+| bs3200 c16 ma1000 | 82,600/211.1  377,778/37.2  407,147/35.2  443,671/50.2  476,782/33.7  487,397/32.7  499,719/32.1 | 443,671 / 35.2 ms |
+| B4: bs3200 c8 ma4000 | 453,545/70.5  453,786/70.5  456,595/70.0  461,222/69.3  461,438/69.3  470,468/68.0  500,229/61.5 | 461,222 / 69.3 ms |
+
+Throughput -3.8%, p = 0.46 -- not confirmed. Mean latency 35.2 vs
+69.3 ms, p = 0.026 -- not confirmed. Six of its 7 runs had lower
+latency (32.1-50.2 ms) than every B4 run (61.5-70.5 ms); the seventh
+collapsed to 82,600 tps at 211.1 ms.
+
+**Finding:** the Stage G result did not hold at 7 reps. Excluding the
+collapsed run, its throughput ranged 377,778-499,719. That matches its
+earlier record: a 30.6% spread in Stage D3 and 30.7% in the section 8
+re-run. **B4 is retained.** B4's Stage H median is within 0.3% of its
+Stage F median (459,790 at 69.6 ms).
+
+### 11.3 Threads and write ratio in Stage G (3 reps)
+
+**Threads.** 2 threads measured far lower in some configurations:
+
+- bs3200 / 16 clients / `ma`=1,000, 90% writes: 371,442 against 482,211
+  at 4 threads (-23%). The runs at each thread count are within 3.8%
+  of each other. The range rule did not resolve this because the
+  8-thread cell of the same comparison contains a collapsed run.
+- bs6400 / 8 clients / `ma`=4,000: -17.4% (10% writes) and -14.3% (90%
+  writes) against 4 threads. Both resolvable.
+
+In others it did not: at bs3200 / 8 clients / `ma`=4,000 / 10% writes,
+2 threads measured highest (501,998; not resolvable). The 4- and
+8-thread medians were within 5.3% of each other in all 24 cells.
+
+**Write ratio.** In every one of the 35 comparisons where neither median
+is itself a collapsed run, 10% writes measured higher than 90%, by
++1.0% to +12.4%. 16 of the 35 are resolvable. This extends section 9.2
+to every Stage G configuration; the adopted setting remains 90%
+(section 10b).
+
+### 11.4 Overlap with Stage D3
+
+6 of the 7 bs3200 cells at the adopted settings came within +/-3.8% of
+their Stage D3 medians. The seventh, 16 clients / `ma`=16,000, came in at
++7.9%; its Stage G spread is 12.8%.
+
+### 11.5 Variance and latency observations -- no explanation established
+
+- **Collapsed runs, Stage G: 6 of 216, all at 16 clients.**
+  - `ma`=1,000, 8 threads: 244,051 tps (10% writes) and 247,447 (90%),
+    at 378.3 and 446.5 ms, against siblings of 478k-539k at ~30-34 ms.
+  - `ma`=16,000, 2 threads: 84,180 (bs3200, 10% writes), 173,657
+    (bs6400, 90%), and **two of the three runs** of bs3200 / 90% writes
+    (63,459 and 74,517, against 390,383). That cell's median is itself
+    a collapsed run.
+- **Collapsed runs, Stage H: 1 of 28**, bs3200 / 16 clients / `ma`=1,000
+  (82,600 tps).
+- **At 16 clients / `ma`=16,000, mean latency falls into two groups.**
+  Of the 32 runs that did not collapse, 4 measured 225-354 ms and 28
+  measured 413-644 ms.
+- **At 4 clients / `ma`=16,000, mean latency is below median latency**
+  in 18 of 18 bs3200 runs and 14 of 18 bs6400 runs.
+- **Single runs at about half their siblings' latency, at normal
+  throughput:** bs3200 / 8 clients / `ma`=16,000 / 8 threads / 10% writes
+  measured 63.4 ms against 285.5 and 297.0 ms in its other two runs. In
+  Stage H, one bs3200 / 16 clients / `ma`=4,000 run measured 74.5 ms
+  against 150.1-157.7 ms in the other six.
+
+---
+
+## 12. Pending
 
 **Carry-over:** the network-latency work predates the measurement fix
 and was run entirely single-client, in the regime now known to be
 client-limited. It will need re-running at one or more of the section 2b
 baselines.
 
+**Measured at 3 reps only:** thread count at B1, B2 and B4; write ratio
+and skew at B3 other than the B3 skew comparison in 9.3; all Stage G
+comparisons except the two re-tested in Stage H.
+
 ---
 
-## 10. Data
+## 13. Data
 
 | file | contents |
 |---|---|
@@ -390,6 +708,13 @@ baselines.
 | `results/stage_b_results.csv` | 75 runs, bs x ma grid |
 | `results/stage_c_results.csv` | 48 runs, ma extension to 256k |
 | `results/stage_d3_results.csv` | 261 runs, bs x clients x ma |
-| `results/run_logs/` | per-run logs, 36 GB, not in git |
-| `analyse_stage_a.py` … `analyse_stage_d3.py` | analysis scripts |
+| `results/rerun_noisy_results.csv` | 63 runs, section 8 re-run |
+| `results/stage_e_results.csv` | 96 runs, threads / skew / write ratio at B1-B4 |
+| `results/stage_f_results.csv` | 91 runs, 7-rep confirmation of Stage E |
+| `results/stage_g_results.csv` | 216 runs, block_size 6400 extension |
+| `results/stage_h_results.csv` | 28 runs, 7-rep check of Stage G |
+| `results/stage_g_analysis.txt`, `results/stage_h_analysis.txt` | analysis output as run |
+| `results/run_logs/` | per-run logs on node5, not in git. Since commit `d0666db`, raw client logs are replaced by `summaries.txt` once parsed |
+| `../exp3_full_results.tgz` | pre-prune archive of every run log up to the first 20 Stage F runs, 5.25 GB, not in git |
+| `analyse_stage_a.py` … `analyse_stage_h.py` | analysis scripts |
 | `make_stage_*.py` | grid generators |
