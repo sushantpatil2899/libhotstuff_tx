@@ -1,0 +1,134 @@
+Stage N: 340 runs with metrics, 68 cells
+
+=== 1. delay verification (rtt.json) ===
+  runs passing every pair: 340
+  runs with a failing pair: 0
+  runs with no usable probe: 0
+  measured mean RTT by expected added RTT, over all pairs:
+    expected +  0 ms: n= 2720  min     0.06  median     0.10  max     0.24
+    expected +100 ms: n=  680  min   100.11  median   100.14  max   100.19
+    expected +200 ms: n=  680  min   200.11  median   200.14  max   200.18
+    expected +300 ms: n=  680  min   300.12  median   300.14  max   300.16
+    expected +400 ms: n=  680  min   400.11  median   400.14  max   400.16
+
+=== 2. per baseline: median tps / mean latency, vs control ===
+
+########## B1 bs200 c2 ma1000 ##########
+  control (0 ms):    165,681 tps     12.1 ms  p99 14.0  spread 2.7%  n=5
+  --- leader only ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms      1,971   -98.8%   1017.9    8337%   1022.8    0.1%  RESOLVABLE
+      100ms        993   -99.4%   2007.8   16543%   2023.3    0.4%  RESOLVABLE
+      150ms        665   -99.6%   2990.9   24692%   3135.1    0.1%  RESOLVABLE
+      200ms        501   -99.7%   3967.1   32784%   4584.9    0.0%  RESOLVABLE
+  --- one follower (0) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms    160,911    -2.9%     12.0      -0%     14.5    4.6%  not resolvable
+      100ms    164,695    -0.6%     12.1       1%     14.6    2.9%  not resolvable
+      150ms    162,796    -1.7%     12.3       2%     13.7    1.6%  not resolvable
+      200ms    165,285    -0.2%     12.1       0%     14.7    3.2%  not resolvable
+  --- two followers (0,2) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms      1,975   -98.8%   1016.7    8327%   1022.4    0.3%  RESOLVABLE
+      100ms        996   -99.4%   2004.1   16512%   2022.2    0.4%  RESOLVABLE
+      150ms        665   -99.6%   2983.6   24632%   3022.9    0.0%  RESOLVABLE
+      200ms        501   -99.7%   3954.4   32678%   4385.8    0.0%  RESOLVABLE
+  --- three followers (0,2,3) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms      1,971   -98.8%   1017.9    8338%   1022.9    0.3%  RESOLVABLE
+      100ms        993   -99.4%   2007.8   16543%   2023.3    0.3%  RESOLVABLE
+      150ms        665   -99.6%   2991.1   24693%   3135.7    0.0%  RESOLVABLE
+      200ms        501   -99.7%   3967.5   32787%   4586.3    0.0%  RESOLVABLE
+
+########## B2 bs800 c4 ma1000 ##########
+  control (0 ms):    303,619 tps     13.2 ms  p99 17.2  spread 4.0%  n=5
+  --- leader only ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms      7,789   -97.4%    515.8    3812%    518.2    0.3%  RESOLVABLE
+      100ms      3,978   -98.7%   1019.2    7630%   1119.1    0.3%  RESOLVABLE
+      150ms      2,653   -99.1%   1525.1   11467%   1929.8    0.1%  RESOLVABLE
+      200ms      1,998   -99.3%   2033.2   15321%   2939.2    0.0%  RESOLVABLE
+  --- one follower (0) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms    310,474     2.3%     12.9      -2%     18.6    6.0%  not resolvable
+      100ms    305,494     0.6%     13.1      -1%     20.3    8.8%  not resolvable
+      150ms    305,572     0.6%     13.1      -1%     17.2    5.7%  not resolvable
+      200ms    313,500     3.3%     12.8      -3%     17.9    3.9%  not resolvable
+  --- two followers (0,2) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms      7,813   -97.4%    514.8    3805%    516.9    0.5%  RESOLVABLE
+      100ms      3,994   -98.7%   1016.9    7613%   1018.2    0.5%  RESOLVABLE
+      150ms      2,667   -99.1%   1520.8   11434%   1777.7    0.1%  RESOLVABLE
+      200ms      1,998   -99.3%   2026.0   15266%   2737.7    0.0%  RESOLVABLE
+  --- three followers (0,2,3) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms      7,795   -97.4%    515.6    3811%    518.0    0.4%  RESOLVABLE
+      100ms      3,979   -98.7%   1019.1    7630%   1118.6    0.0%  RESOLVABLE
+      150ms      2,653   -99.1%   1524.9   11465%   1928.7    0.0%  RESOLVABLE
+      200ms      1,998   -99.3%   2032.7   15317%   2937.1    0.1%  RESOLVABLE
+
+########## B3 bs1600 c8 ma1000 ##########
+  control (0 ms):    446,626 tps     17.9 ms  p99 25.1  spread 6.5%  n=5
+  --- leader only ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms     15,402   -96.6%    521.5    2811%    524.6    0.3%  RESOLVABLE
+      100ms      7,867   -98.2%   1026.8    5632%   1322.0    0.0%  RESOLVABLE
+      150ms      5,287   -98.8%   1536.6    8478%   2191.9    0.0%  RESOLVABLE
+      200ms      4,067   -99.1%   2050.4   11347%   3255.9    0.0%  RESOLVABLE
+  --- one follower (0) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms    397,534   -11.0%     20.2      13%     33.2    7.2%  RESOLVABLE
+      100ms    412,624    -7.6%     19.4       8%     29.8    4.1%  RESOLVABLE
+      150ms    408,408    -8.6%     19.6      10%     29.1    3.3%  RESOLVABLE
+      200ms    404,071    -9.5%     19.8      11%     30.7    3.6%  RESOLVABLE
+  --- two followers (0,2) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms     15,441   -96.5%    520.6    2806%    522.8    0.3%  RESOLVABLE
+      100ms      7,871   -98.2%   1024.8    5621%   1221.8    0.5%  RESOLVABLE
+      150ms      5,290   -98.8%   1532.2    8454%   2040.2    0.1%  RESOLVABLE
+      200ms      3,986   -99.1%   2043.1   11306%   3057.6    0.2%  RESOLVABLE
+  --- three followers (0,2,3) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms     15,406   -96.6%    521.4    2811%    524.3    0.2%  RESOLVABLE
+      100ms      7,867   -98.2%   1026.9    5633%   1322.4    0.0%  RESOLVABLE
+      150ms      5,286   -98.8%   1536.9    8480%   2191.3    0.0%  RESOLVABLE
+      200ms      4,067   -99.1%   2050.6   11347%   3256.0    0.0%  RESOLVABLE
+
+########## B4 bs3200 c8 ma4000 ##########
+  control (0 ms):    455,198 tps     70.3 ms  p99 92.0  spread 5.4%  n=5
+  --- leader only ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms     30,022   -93.4%   1068.3    1420%   1097.1    1.5%  RESOLVABLE
+      100ms     15,727   -96.5%   2077.4    2857%   2736.5    0.2%  RESOLVABLE
+      150ms     10,753   -97.6%   3091.8    4300%   4448.6    0.6%  RESOLVABLE
+      200ms      8,197   -98.2%   4113.2    5754%   6028.9    0.1%  RESOLVABLE
+  --- one follower (0) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms    404,197   -11.2%     79.1      13%    117.8    4.8%  RESOLVABLE
+      100ms    401,783   -11.7%     79.6      13%    118.2    3.8%  RESOLVABLE
+      150ms    410,183    -9.9%     78.0      11%     93.5    4.0%  RESOLVABLE
+      200ms    403,543   -11.3%     79.3      13%    120.4    5.5%  RESOLVABLE
+  --- two followers (0,2) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms     30,248   -93.4%   1062.4    1412%   1072.2    0.5%  RESOLVABLE
+      100ms     15,800   -96.5%   2071.7    2849%   2636.9    0.5%  RESOLVABLE
+      150ms     10,808   -97.6%   3084.1    4289%   4301.0    0.1%  RESOLVABLE
+      200ms      8,234   -98.2%   4099.2    5734%   5828.5    0.7%  RESOLVABLE
+  --- three followers (0,2,3) ---
+      delay        tps   vs ctl   lat ms   vs ctl      p99  spread  verdict (tps)
+       50ms     30,445   -93.3%   1067.9    1420%   1095.9    1.5%  RESOLVABLE
+      100ms     15,717   -96.5%   2078.9    2859%   2738.3    0.2%  RESOLVABLE
+      150ms     10,749   -97.6%   3092.5    4301%   4452.5    0.1%  RESOLVABLE
+      200ms      8,196   -98.2%   4113.6    5755%   6029.8    0.1%  RESOLVABLE
+
+=== 3. lowest run / cell median (lowest 10) ===
+  0.954  B3 ctl d0  runs [426105, 434780, 446626, 447310, 455010]
+  0.961  B4 ctl d0  runs [437453, 453281, 455198, 456361, 462088]
+  0.961  B3 f1 d100  runs [396708, 406120, 412624, 412718, 413387]
+  0.966  B3 f1 d50  runs [384199, 395565, 397534, 402417, 413063]
+  0.967  B4 f1 d200  runs [390179, 402618, 403543, 405043, 412325]
+  0.975  B3 f1 d200  runs [393913, 399150, 404071, 405249, 408218]
+  0.976  B2 f1 d150  runs [298221, 304178, 305572, 306902, 315702]
+  0.976  B1 f1 d200  runs [161367, 163066, 165285, 165298, 166609]
+  0.977  B4 f1 d50  runs [395083, 403675, 404197, 410827, 414704]
+  0.979  B2 f1 d100  runs [298996, 304875, 305494, 313787, 326165]

@@ -1,5 +1,10 @@
 > # ⚠️ RETRACTED — 2026-09-07
 >
+> **Superseded 2026-09-12 by `BASELINE_ANALYSIS.md` section 12**
+> (Stage N: 340 runs, multi-client, on the corrected measurement
+> path, with the injected delay verified in every run from
+> `rtt.json`). Read that instead of this document.
+>
 > **The headline findings in this document are void. The injected
 > latency provably reached the replicas' own TCP sockets, yet left no
 > trace whatsoever on commit latency. The results below therefore do

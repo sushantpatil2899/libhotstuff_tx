@@ -1,5 +1,10 @@
 > # ⚠️ RETRACTED — 2026-09-07
 >
+> **Superseded 2026-09-12 by `BASELINE_ANALYSIS.md` section 12**
+> (Stage N: 340 runs, multi-client, on the corrected measurement
+> path, with the injected delay verified in every run from
+> `rtt.json`). Read that instead of this document.
+>
 > **The conclusion drawn below does not hold. The delay did reach the
 > application's own sockets, yet the commit path shows no trace of
 > it. That contradiction is unresolved.**

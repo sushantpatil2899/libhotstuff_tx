@@ -6,14 +6,16 @@ commit is void; see `INVESTIGATION_RECORD.md` for why.
 
 Reservation: CloudLab Utah Exp-3, `d6515`. 4 replicas (node1 = fixed
 proposer), 1 dedicated client host (node4, 64 cores), node5 as
-orchestrator. 60s runs, no injected network latency.
+orchestrator. 60s runs. Stages A-H ran with no injected network
+latency; Stage N (section 12) injects it.
 
-Totals: 923 runs across nine sweeps. Stage F lost 7 rows to a full
+Totals: 1,263 runs across ten sweeps. Stage F lost 7 rows to a full
 orchestrator disk; they were re-run. 20 Stage F parses failed for the
 same reason and were re-parsed from intact logs. Stage G logged two
 transient orchestrator SSH errors: one status-poll connection and one
 pre-run cleanup that succeeded on retry. Both rows completed, and each
-matched its sibling reps. No other run errors or parse failures.
+matched its sibling reps. Stage N: 340 of 340 runs clean. No other run
+errors or parse failures.
 
 ---
 
@@ -687,20 +689,148 @@ their Stage D3 medians. The seventh, 16 clients / `ma`=16,000, came in at
 
 ---
 
-## 12. Pending
+## 12. Injected network latency at the baselines (Stage N)
 
-**Carry-over:** the network-latency work predates the measurement fix
-and was run entirely single-client, in the regime now known to be
-client-limited. It will need re-running at one or more of the section 2b
-baselines.
+4 scenarios x 4 delays x B1-B4, plus a 0 ms control per baseline, 5 reps
+= 340 runs, 0 errors. Every run at threads 4, 90% writes, skew 0.1, the
+adopted settings. Delay per replica via `tc`; a link gets
+max(lat_a, lat_b) in both directions, so a delayed link's round trip is
+2 x its delay value. Client traffic is never shaped. Replica 1 is the
+fixed proposer.
 
+    lead   leader delayed            lat_node1 = d           6 of 12 links
+    f1     one follower delayed      lat_node0 = d           6 of 12 links
+    f2     two followers delayed     lat_node0,2 = d        10 of 12 links
+    f3     three followers delayed   lat_node0,2,3 = d      12 of 12 links
+
+"All four nodes delayed" is not a distinct case: under the max rule every
+link has a follower end, so it produces f3's rules exactly.
+
+This supersedes `NETEM_ANALYSIS.md` and `NETEM_FACTORIAL_ANALYSIS.md`
+entirely: both predate the measurement fix and ran single-client.
+
+### 12.1 The delay is verified in every run
+
+Each run pings, after `tc` is applied and before the replicas boot, from
+every replica to every other replica and from the client host to every
+replica, and stores the result as `rtt.json` beside its logs
+(`RemoteBench._probe_rtt`). Over all 340 runs, 5,440 measured pairs:
+
+| expected added round trip | pairs | measured median | measured range |
+|---|---|---|---|
+| 0 ms (undelayed and client links) | 2,720 | 0.10 ms | 0.06 - 0.24 |
+| 100 ms | 680 | 100.14 ms | 100.11 - 100.19 |
+| 200 ms | 680 | 200.14 ms | 200.11 - 200.18 |
+| 300 ms | 680 | 300.14 ms | 300.12 - 300.16 |
+| 400 ms | 680 | 400.14 ms | 400.11 - 400.16 |
+
+0% packet loss throughout. No run had a failing or missing probe. The
+earlier netem work could not establish this, which is why its
+conclusions were retracted.
+
+### 12.2 One delayed follower
+
+Medians of 5 reps, tps / mean latency ms:
+
+| | control | 50 ms | 100 ms | 150 ms | 200 ms | verdict |
+|---|---|---|---|---|---|---|
+| **B1** | 165,681 / 12.1 | 160,911 / 12.0 | 164,695 / 12.1 | 162,796 / 12.3 | 165,285 / 12.1 | -0.2% to -2.9%, not resolvable |
+| **B2** | 303,619 / 13.2 | 310,474 / 12.9 | 305,494 / 13.1 | 305,572 / 13.1 | 313,500 / 12.8 | +0.6% to +3.3%, not resolvable |
+| **B3** | 446,626 / 17.9 | 397,534 / 20.2 | 412,624 / 19.4 | 408,408 / 19.6 | 404,071 / 19.8 | **-7.6% to -11.0%, resolvable** |
+| **B4** | 455,198 / 70.3 | 404,197 / 79.1 | 401,783 / 79.6 | 410,183 / 78.0 | 403,543 / 79.3 | **-9.9% to -11.7%, resolvable** |
+
+**Finding:** one delayed follower costs nothing resolvable at B1 and B2,
+and 8-12% throughput with 8-13% higher mean latency at B3 and B4. **The
+cost does not grow with the delay**: at B3 and B4, 200 ms costs the same
+as 50 ms, within the spread.
+
+### 12.3 Delayed leader, two followers, three followers
+
+Medians of 5 reps, tps / mean latency ms. Every cell below is resolvable
+against its control:
+
+| | scenario | 50 ms | 100 ms | 150 ms | 200 ms |
+|---|---|---|---|---|---|
+| **B1** | leader | 1,971 / 1,018 | 993 / 2,008 | 665 / 2,991 | 501 / 3,967 |
+| | two followers | 1,975 / 1,017 | 996 / 2,004 | 665 / 2,984 | 501 / 3,954 |
+| | three followers | 1,971 / 1,018 | 993 / 2,008 | 665 / 2,991 | 501 / 3,968 |
+| **B2** | leader | 7,789 / 516 | 3,978 / 1,019 | 2,653 / 1,525 | 1,998 / 2,033 |
+| | two followers | 7,813 / 515 | 3,994 / 1,017 | 2,667 / 1,521 | 1,998 / 2,026 |
+| | three followers | 7,795 / 516 | 3,979 / 1,019 | 2,653 / 1,525 | 1,998 / 2,033 |
+| **B3** | leader | 15,402 / 522 | 7,867 / 1,027 | 5,287 / 1,537 | 4,067 / 2,050 |
+| | two followers | 15,441 / 521 | 7,871 / 1,025 | 5,290 / 1,532 | 3,986 / 2,043 |
+| | three followers | 15,406 / 521 | 7,867 / 1,027 | 5,286 / 1,537 | 4,067 / 2,051 |
+| **B4** | leader | 30,022 / 1,068 | 15,727 / 2,077 | 10,753 / 3,092 | 8,197 / 4,113 |
+| | two followers | 30,248 / 1,062 | 15,800 / 2,072 | 10,808 / 3,084 | 8,234 / 4,099 |
+| | three followers | 30,445 / 1,068 | 15,717 / 2,079 | 10,749 / 3,093 | 8,196 / 4,114 |
+
+As a share of each baseline's control: **-93.3% to -99.7%**. Mean latency
+rises from 12-70 ms to 0.5-4.1 s.
+
+**Findings:**
+
+1. **The three scenarios measure the same**, at every baseline and every
+   delay, although they delay 6, 10 and 12 of the 12 replica links.
+   Largest disagreement among the three at any point: 2.0% (B3, 200 ms).
+2. **Doubling the delay halves throughput and doubles latency**, across
+   all four baselines and all three scenarios.
+3. **In all 48 collapsed cells, median throughput x median latency equals
+   `clients x max_async` within 5.5%** (B1 -1.0% to +0.4%, B2 +0.4% to
+   +1.6%, B3 +0.4% to +4.2%, B4 +0.2% to +5.5%). This is arithmetic on
+   the measurements; it says nothing about what sets the latency.
+4. The collapsed level tracks the baseline's in-flight budget: at 200 ms,
+   B1 (2,000 outstanding) 501 tps, B2 (4,000) 1,998, B3 (8,000) 4,067,
+   B4 (32,000) 8,197.
+
+### 12.4 Where the boundary falls
+
+With 4 replicas, f = 1 and a quorum is 3. With one replica delayed, three
+undelayed replicas remain, which is a full quorum containing no delayed
+member; with two delayed, every 3-replica quorum contains a delayed
+member. The measured boundary -- f1 absorbed, f2 collapsed -- coincides
+with that arithmetic.
+
+**This is a correspondence between the measurements and the
+configuration's quorum arithmetic, not a demonstrated mechanism.** The
+test that would establish it needs 7 replicas (f = 2, quorum 5), where
+two delayed replicas still leave a clean quorum and three do not. That
+needs 9 nodes; the current reservation has 6.
+
+### 12.5 Variance
+
+The tightest data in the project. **No collapsed runs:** the lowest run
+in any of the 68 cells is 0.954x its cell median. Delayed cells carry
+spreads of 0.0-1.5%; the four controls, 2.7-6.5%.
+
+### 12.6 Not established
+
+- What sets the throughput and latency levels in the collapsed regime.
+- Why one delayed follower costs 8-12% at B3 and B4 and nothing
+  resolvable at B1 and B2.
+- Why that cost is flat in the delay from 50 to 200 ms.
+- Whether batching or in-flight load changes the collapsed level. Stage N
+  cannot attribute it, because its baselines vary `block_size`, clients
+  and `max_async` together. Stage O separates those two axes under leader
+  delay.
+
+---
+
+## 13. Pending
 **Measured at 3 reps only:** thread count at B1, B2 and B4; write ratio
 and skew at B3 other than the B3 skew comparison in 9.3; all Stage G
 comparisons except the two re-tested in Stage H.
 
+**Stage O (running):** `block_size` 800-6400 at 8 clients / `max_async`
+4,000, and `max_async` 4,000-32,000 at `block_size` 3200, each with no
+delay, leader 100 ms and leader 200 ms. 21 configs x 3 reps = 63 runs.
+Separates batching from in-flight load under delay (section 12.6).
+
+**Next, agreed:** re-run the Stage N sweep with a rotating leader
+(`pace_maker = rr`) instead of the fixed proposer.
+
 ---
 
-## 13. Data
+## 14. Data
 
 | file | contents |
 |---|---|
@@ -713,8 +843,10 @@ comparisons except the two re-tested in Stage H.
 | `results/stage_f_results.csv` | 91 runs, 7-rep confirmation of Stage E |
 | `results/stage_g_results.csv` | 216 runs, block_size 6400 extension |
 | `results/stage_h_results.csv` | 28 runs, 7-rep check of Stage G |
-| `results/stage_g_analysis.txt`, `results/stage_h_analysis.txt` | analysis output as run |
+| `results/stage_n_results.csv` | 340 runs, injected network latency at B1-B4 |
+| `results/stage_g_analysis.txt`, `results/stage_h_analysis.txt`, `results/stage_n_analysis.txt` | analysis output as run |
+| `results/run_logs/<run_id>/rtt.json` | per-run measured round trips, every pair, since commit `e01221a` |
 | `results/run_logs/` | per-run logs on node5, not in git. Since commit `d0666db`, raw client logs are replaced by `summaries.txt` once parsed |
 | `../exp3_full_results.tgz` | pre-prune archive of every run log up to the first 20 Stage F runs, 5.25 GB, not in git |
-| `analyse_stage_a.py` … `analyse_stage_h.py` | analysis scripts |
+| `analyse_stage_a.py` … `analyse_stage_n.py` | analysis scripts |
 | `make_stage_*.py` | grid generators |
