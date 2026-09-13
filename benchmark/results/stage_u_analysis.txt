@@ -1,0 +1,32 @@
+=== throughput: sampled vs not sampled (overhead check) ===
+  sampled  n=5 stalled=0  tps_steady median 441,448 (range 424,520-457,167)  latency median 18.1 ms
+  plain    n=5 stalled=0  tps_steady median 438,678 (range 423,872-453,913)  latency median 18.2 ms
+
+=== per host, median over sampled runs (window t=15-55 s) ===
+  host                            cores    busiest %     busy thr      threads   psi some %       nvcs/s        vcs/s       rss MB   host cores        watts W pre-client      sampler
+  replica 0 (follower)             4.49           87            7           30         1.94            2       35,621        4,196         4.48         70.2         50.4        0.016
+  replica 1 (LEADER)               4.63           85            8           30         1.87            1       31,050        4,226         4.66         69.0         50.1        0.016
+  replica 2 (follower)             4.50           86            8           30         2.06            3       36,480        4,198         4.50         68.0         50.5        0.017
+  replica 3 (follower)             5.48           95            9           30         1.16            2       12,245        4,587         5.55         58.2         50.2        0.022
+  clienthost-0                    11.29           92           16           32         0.70            9       29,954        1,768        11.62         90.7         50.7        0.018
+
+  busiest thread names per host:
+    replica 0 (follower)     ['hotstuff-app']
+    replica 1 (LEADER)       ['hotstuff-app']
+    replica 2 (follower)     ['hotstuff-app']
+    replica 3 (follower)     ['hotstuff-app']
+    clienthost-0             ['hotstuff-client']
+
+=== per-thread utilisation, % of one core, ranked (median by rank over sampled runs); threads under 1% omitted ===
+    replica 0 (follower)     87 79 58 54 53 52 51 5 4 3
+    replica 1 (LEADER)       85 78 58 57 54 53 53 6 5 3 3 2 2 1
+    replica 2 (follower)     86 79 58 55 53 53 52 7 4
+    replica 3 (follower)     95 92 77 70 69 66 64 6 5 4
+    clienthost-0             92 92 92 91 91 90 90 89 52 52 51 51 51 50 50 49
+
+=== per run: cores used [replica 0, replica 1 (leader), replica 2, replica 3, client host] ===
+  U_sampled_r1     tps_steady   424,520  cores [4.21 4.40 4.33 5.26 11.21]
+  U_sampled_r2     tps_steady   427,704  cores [4.36 4.56 4.45 5.48 11.12]
+  U_sampled_r3     tps_steady   457,167  cores [4.63 4.85 4.69 5.63 11.41]
+  U_sampled_r4     tps_steady   441,448  cores [4.49 4.63 4.50 5.63 11.29]
+  U_sampled_r5     tps_steady   456,975  cores [4.55 4.76 4.65 5.48 11.53]

@@ -94,6 +94,8 @@ def host_metrics(path):
         'sampler_cores': ((b['self_ticks'] or 0) - (a['self_ticks'] or 0))
         / tck / dt,
         'nprocs': len(pids),
+        'thread_pcts': sorted((pct for _, pct in threads.values()),
+                              reverse=True),
     }
 
 
@@ -151,7 +153,18 @@ if sampled:
         tn = sorted({hosts[n]['busiest_name'] for _, _, hosts in sampled
                      if n in hosts})
         print(f'    {label.get(n, n):<24} {tn}')
-    print('\n=== per run: cores used (leader / followers / client host) ===')
+    print('\n=== per-thread utilisation, % of one core, ranked (median by '
+          'rank over sampled runs); threads under 1% omitted ===')
+    for n in names:
+        lists = [hosts[n]['thread_pcts'] for _, _, hosts in sampled
+                 if n in hosts]
+        depth = max(len(x) for x in lists)
+        ranked = [st.median(x[i] for x in lists if len(x) > i)
+                  for i in range(depth)]
+        shown = [f'{v:.0f}' for v in ranked if v >= 1]
+        print(f'    {label.get(n, n):<24} {" ".join(shown)}')
+
+    print('\n=== per run: cores used [replica 0, replica 1 (leader), replica 2, replica 3, client host] ===')
     for rid, met, hosts in sampled:
         rep = ' '.join(f'{hosts[n]["cores"]:.2f}' for n in names if n in hosts)
         print(f'  {rid:<16} tps_steady {met.get("tps_steady", 0):>9,.0f}  '
