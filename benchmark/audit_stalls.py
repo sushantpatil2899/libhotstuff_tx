@@ -93,7 +93,8 @@ def mark(changed):
 print('=== 0. stalled runs per stage ===')
 STAGES = {
     'stage_a': r'(.*)_r\d+$', 'stage_b': r'(.*)_r\d+$',
-    'stage_c': r'(.*)_r\d+$', 'stage_d3': r'(.*)_r\d+$',
+    'stage_c': r'(.*)_r\d+$', 'stage_mc': r'(.*)_r\d+$',
+    'stage_d3': r'(.*)_r\d+$',
     'rerun_noisy': r'(.*)_r\d+$', 'stage_e': r'(.*)_r\d+$',
     'stage_f': r'(.*)_r\d+$', 'stage_g': r'(.*)_r\d+$',
     'stage_h': r'(.*)_r\d+$', 'stage_n': r'(.*)_r\d+$',

@@ -1,0 +1,28 @@
+B4 (c8 ma4000): 10 runs, 0 stalled
+   r1     451,260 tps     70.9 ms  p99 worst client    92.6  zero-commit 0 s   (old formula 454,325)
+   r2     454,003 tps     70.5 ms  p99 worst client    89.6  zero-commit 0 s   (old formula 458,146)
+   r3     440,794 tps     72.6 ms  p99 worst client    88.4  zero-commit 0 s   (old formula 444,943)
+   r4     462,337 tps     69.1 ms  p99 worst client   174.2  zero-commit 0 s   (old formula 466,909)
+   r5     460,549 tps     69.5 ms  p99 worst client    85.0  zero-commit 0 s   (old formula 461,755)
+   r6     452,225 tps     70.8 ms  p99 worst client    98.1  zero-commit 0 s   (old formula 455,177)
+   r7     448,257 tps     71.4 ms  p99 worst client    85.2  zero-commit 0 s   (old formula 455,120)
+   r8     451,457 tps     70.9 ms  p99 worst client    95.7  zero-commit 0 s   (old formula 452,148)
+   r9     446,772 tps     71.6 ms  p99 worst client    94.3  zero-commit 0 s   (old formula 451,246)
+   r10    451,790 tps     70.8 ms  p99 worst client    96.9  zero-commit 0 s   (old formula 454,003)
+   clean median 451,624 tps, 70.8 ms, spread 4.8%
+candidate (c16 ma1000): 10 runs, 1 stalled
+   r1     505,544 tps     31.6 ms  p99 worst client    36.1  zero-commit 0 s   (old formula 506,216)
+   r2     410,258 tps     35.1 ms  p99 worst client    40.8  zero-commit 0 s   (old formula 416,771)
+   r3     357,217 tps     38.5 ms  p99 worst client    45.2  zero-commit 0 s   (old formula 359,772)
+   r4     516,400 tps     31.0 ms  p99 worst client    39.5  zero-commit 0 s   (old formula 515,513)
+   r5     502,810 tps     31.8 ms  p99 worst client    43.0  zero-commit 0 s   (old formula 501,139)
+   r6           0 tps      0.0 ms  p99 worst client     0.0  zero-commit 50 s  STALLED   (old formula 459,496)
+   r7     498,106 tps     32.1 ms  p99 worst client    38.4  zero-commit 0 s   (old formula 503,740)
+   r8     484,632 tps     33.0 ms  p99 worst client    40.6  zero-commit 0 s   (old formula 487,358)
+   r9     398,405 tps     35.8 ms  p99 worst client    43.2  zero-commit 0 s   (old formula 416,564)
+   r10    485,201 tps     33.0 ms  p99 worst client    38.9  zero-commit 0 s   (old formula 491,223)
+   clean median 485,201 tps, 33.0 ms, spread 34.5%
+
+rank tests on non-stalled runs, confirm at p < 0.025:
+   tps_steady               candidate 485,200.8 vs B4 451,623.5  p=0.2428  not confirmed
+   latency_ms_mean_steady   candidate 33.0 vs B4 70.8  p=0.0000  CONFIRMED

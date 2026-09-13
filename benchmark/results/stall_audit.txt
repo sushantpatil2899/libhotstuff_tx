@@ -2,6 +2,7 @@
   stage_a        45 runs    0 stalled  in 0 cells
   stage_b        75 runs    0 stalled  in 0 cells
   stage_c        48 runs    0 stalled  in 0 cells
+  stage_mc       27 runs    0 stalled  in 0 cells
   stage_d3      261 runs    8 stalled  in 6 cells
       D3_bs1600_c16_ma1000                 1/3
       D3_bs1600_c8_ma64000                 1/3

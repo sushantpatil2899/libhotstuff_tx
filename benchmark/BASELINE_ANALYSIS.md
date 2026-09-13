@@ -9,13 +9,13 @@ proposer), 1 dedicated client host (node4, 64 cores), node5 as
 orchestrator. 60s runs. Stages A-H ran with no injected network
 latency; Stage N (section 12) injects it.
 
-Totals: 1,425 runs across fourteen sweeps (Stages A-H, N, O, P, Q, the
+Totals: 1,445 runs across fifteen sweeps (Stages A-H, N, O, P, Q, R, the
 section 8 re-run and the `rr` shakedown). Stage F lost 7 rows to a full
 orchestrator disk; they were re-run. 20 Stage F parses failed for the
 same reason and were re-parsed from intact logs. Stage G logged two
 transient orchestrator SSH errors: one status-poll connection and one
 pre-run cleanup that succeeded on retry. Both rows completed, and each
-matched its sibling reps. Stages N, O, P, Q and the `rr` shakedown ran
+matched its sibling reps. Stages N, O, P, Q, R and the `rr` shakedown ran
 without errors. No other run errors or parse failures. Separately from
 errors, 29 runs stalled (section 13).
 
@@ -90,6 +90,12 @@ That is **5.0x** the best single-client figure ever recorded here
 90,770 tps. The apparent plateau at ~90k was a property of running one
 client process, not of the system.
 
+> **Later measurements (sections 13.6 and 14).** At 90% writes, the highest
+> throughputs measured since are 481,140 tps at 66.6 ms (bs6400 / 8
+> clients / `max_async` 4,000, section 14.2) and a 485,201 tps median at
+> 33.0 ms (bs3200 / 16 clients / `max_async` 1,000, section 13.6, with a
+> 34.5% spread). The baselines are unchanged.
+
 ---
 
 ## 2b. Baselines
@@ -111,6 +117,9 @@ reps where re-run, 3 otherwise.
 > 480,905 tps at 33.4 ms, spread 30.7%) has both. Its spread is not from
 > stalled runs: it had none in Stage D3 or the section 8 re-run, and its
 > low runs ran the full minute.
+>
+> **Resolved (section 13.6): B4 is retained.** That cell is recorded as a
+> measured lower-latency alternative, not a baseline.
 
 These four were selected from Stage D3, which ran only at threads=4,
 `skew`=0.1, `mtx`=0.9. Stage F re-measured each at those settings over 7
@@ -217,6 +226,8 @@ Stage C overlap cells at `ma=32,000` agreed within +/-1.4%.
 | 4 | 177,001 | **329,642** |
 | 8 | 169,903 | 328,448 |
 | 16 | 176,160 | — |
+
+Means of 3 runs, Stage MC; no run stalled (section 13).
 
 Both rows roughly double from 1 to 2 clients. `bs=200` then flattens;
 `bs=800` continues to 4 clients and then flattens. The saturation
@@ -699,7 +710,8 @@ collapsed to 82,600 tps at 211.1 ms.
 >
 > **The candidate delivers the same throughput at half B4's latency.** It
 > stalled in 2 of 7 runs against B4's 1 of 7, and its clean runs range
-> 377,778-499,719. Whether it replaces B4 is an open decision.
+> 377,778-499,719. **Re-measured on the fixed window in Stage R (section
+> 13.6); B4 retained.**
 >
 > The original text follows.
 
@@ -948,7 +960,7 @@ Stage H p-values), and with stalled runs excluded. Output:
 
 | stages | stalled runs |
 |---|---|
-| A, B, C, N, O | 0 |
+| A, B, C, MC (section 3.4), N, O | 0 |
 | D3 | 8, in 6 cells |
 | section 8 re-run | 3, in 2 cells |
 | E | 4, all at B4 |
@@ -994,7 +1006,7 @@ were full-length low runs.
 | 10b | B4 459,790 tps, 69.6 ms | 458,388 tps, 69.8 ms (5 clean runs) |
 | 11.1 / G | 6400 higher in 11 of 30 pairs | 13 of 30 |
 | 11.1 / H | 6400 latency lower not confirmed | confirmed, p = 0.0012 |
-| **11.2 / H** | **bs3200/c16/ma1000 did not beat B4; B4 retained** | **same throughput (p = 0.66) at half the latency (33.7 vs 69.7 ms, p = 0.0043); stalled 2/7 vs B4 1/7. Decision reopened.** |
+| **11.2 / H** | **bs3200/c16/ma1000 did not beat B4; B4 retained** | **same throughput (p = 0.66) at half the latency (33.7 vs 69.7 ms, p = 0.0043); stalled 2/7 vs B4 1/7. Re-measured in Stage R (13.6): B4 retained, candidate noted.** |
 | 11.3 / G | 2 threads at bs3200/c16/ma1000 not resolvable | resolvably lower at both write ratios (-29.1%, -23.0%) |
 | 11.3 / G | write ratio: 10% higher in 35, 16 resolvable | 10% higher in all 36, 19 resolvable |
 | 11.5 | four latency observations | two were stalled runs (see the note in 11.5) |
@@ -1026,6 +1038,43 @@ within 6 ms of each other. Fixed-window throughput was 3,944 tps, against
 6,205 on the old formula.
 
 ---
+
+### 13.6 B4 against bs3200 / 16 clients / `max_async` 1,000 (Stage R)
+
+Section 13.4 reopened this comparison. Stage R repeated it on the fixed
+window: 10 runs each, interleaved, no delay, threads 4, 90% writes, skew
+0.1, 60 s runs with a 10 s warm-up and 2 s cool-down. The verdicts were
+fixed in advance: exact Mann-Whitney over non-stalled runs, on throughput
+and on mean latency, each confirmed at p < 0.025.
+
+| run | B4 (8 clients, `max_async` 4,000) | candidate (16 clients, `max_async` 1,000) |
+|---|---|---|
+| r1 | 451,260 / 70.9 ms | 505,544 / 31.6 ms |
+| r2 | 454,003 / 70.5 ms | 410,258 / 35.1 ms |
+| r3 | 440,794 / 72.6 ms | 357,217 / 38.5 ms |
+| r4 | 462,337 / 69.1 ms | 516,400 / 31.0 ms |
+| r5 | 460,549 / 69.5 ms | 502,810 / 31.8 ms |
+| r6 | 452,225 / 70.8 ms | **stalled**: 0 tps, 50 s without a commit (old formula: 459,496) |
+| r7 | 448,257 / 71.4 ms | 498,106 / 32.1 ms |
+| r8 | 451,457 / 70.9 ms | 484,632 / 33.0 ms |
+| r9 | 446,772 / 71.6 ms | 398,405 / 35.8 ms |
+| r10 | 451,790 / 70.8 ms | 485,201 / 33.0 ms |
+| stalled | 0 of 10 | 1 of 10 |
+| clean median | **451,624 tps / 70.8 ms** | **485,201 tps / 33.0 ms** |
+| spread | **4.8%** | **34.5%** |
+| worst client p99 | 85.0-174.2 ms | 36.1-45.2 ms |
+
+- **Throughput: not confirmed** (p = 0.24). Of the candidate's 9 clean
+  runs, 6 exceed B4's highest and 3 fall below B4's lowest.
+- **Latency: confirmed** (p = 0.00002). All 9 of the candidate's clean runs
+  (31.0-38.5 ms) are below all 10 of B4's (69.1-72.6 ms).
+- Stalls at these exact settings across Stages D3, the section 8 re-run,
+  E, F, G, H and R: **candidate 3 of 30, B4 5 of 33**.
+
+**Decision: B4 is retained as the baseline.** The candidate is recorded
+here as a measured alternative with less than half B4's latency and the
+same median throughput, but a 34.5% run-to-run throughput spread against
+B4's 4.8%.
 
 ## 14. Batching and in-flight load under leader delay (Stages O, P, Q)
 
@@ -1215,10 +1264,6 @@ tuning that timeout, was not measured and is not pursued** (section 16).
 and skew at B3 other than the B3 skew comparison in 9.3; all Stage G
 comparisons except the two re-tested in Stage H.
 
-**Stage R (running):** B4 against bs3200 / 16 clients / `max_async` 1,000
-on the fixed window, 10 runs each, to settle section 13.4. The baselines
-stay as adopted until it is read.
-
 **Decided, not pursued: forced leader rotation.** The `rr` shakedown
 found that `rr` settled on replica 0 and did not rotate once in 9 runs,
 including with replica 0 delayed 200 ms. `rr` rotates only when a timeout
@@ -1242,6 +1287,7 @@ Stage N with the leader relabelled, so that sweep is dropped too.
 | `results/stage_b_results.csv` | 75 runs, bs x ma grid |
 | `results/stage_c_results.csv` | 48 runs, ma extension to 256k |
 | `results/stage_d3_results.csv` | 261 runs, bs x clients x ma |
+| `results/stage_mc_results.csv` | 27 runs, client count (section 3.4, whose figures are means of 3) |
 | `results/rerun_noisy_results.csv` | 63 runs, section 8 re-run |
 | `results/stage_e_results.csv` | 96 runs, threads / skew / write ratio at B1-B4 |
 | `results/stage_f_results.csv` | 91 runs, 7-rep confirmation of Stage E |
@@ -1251,9 +1297,10 @@ Stage N with the leader relabelled, so that sweep is dropped too.
 | `results/stage_o_results.csv` | 63 runs, block_size and max_async under leader delay |
 | `results/stage_p_results.csv` | 54 runs, block_size to 25,600 under leader delay |
 | `results/stage_q_results.csv` | 33 runs, slow O/P cells on the fixed window (180 s) |
+| `results/stage_r_results.csv` | 20 runs, B4 vs bs3200/c16/ma1000 on the fixed window |
 | `results/stage_rr_results.csv` | 12 runs, `rr` pacemaker shakedown (protocol logging on) |
 | `results/stall_audit.txt` | every stage's comparisons with and without stalled runs |
-| `results/stage_g_analysis.txt`, `results/stage_h_analysis.txt`, `results/stage_n_analysis.txt`, `results/stage_{o,p,q,rr}_analysis.txt` | analysis output as run |
+| `results/stage_g_analysis.txt`, `results/stage_h_analysis.txt`, `results/stage_n_analysis.txt`, `results/stage_{o,p,q,r,rr}_analysis.txt` | analysis output as run |
 | `results/run_logs/<run_id>/rtt.json` | per-run measured round trips, every pair, since commit `e01221a` |
 | `results/run_logs/` | per-run logs on node5, not in git. Since commit `d0666db`, raw client logs are replaced by `summaries.txt` once parsed |
 | `../exp3_full_results.tgz` | pre-prune archive of every run log up to the first 20 Stage F runs, 5.25 GB, not in git |

@@ -153,7 +153,11 @@ Kept deliberately. Each claim was believed on evidence at the time.
 | 11 | `discover_iface`'s raw ssh call caused the connection leak | **False** | The leak was `kill()`'s unclosed `Group(*hosts)`, 2/host/row x 235 rows = 470, measured 478 |
 | 12 | Leak fix verified | **Invalid test** | Connections were counted *after* the process exited, when they die regardless. Re-measuring during a run showed it still climbing (3 -> 33 by row 7) |
 | 13 | `block_size` may not be honoured at runtime | **False** | `ncmds=` equals the configured value in every block across ~28,000 blocks, single distinct value per run |
-| 14 | `block_size` does not change throughput | **Holds** | True on the clean replica-side measure: 92.5k / 95.6k / 87.8k across a 16x range |
+| 14 | `block_size` does not change throughput | **Holds at 1 client only** | True on the clean replica-side measure: 92.5k / 95.6k / 87.8k across a 16x range. With 8+ clients, and under leader delay, it does (`BASELINE_ANALYSIS.md` 3.2, 14) |
+| 15 | Throughput = commits / (last commit - first commit) is valid | **False in two cases** | Blind to idle time after the last commit: 29 runs whose commits stopped early still printed plausible, sometimes high, tps. Also inflated runs whose latency is a large fraction of a 60 s run (up to 4.6x). Fixed-window measurement, commit `2c3224d`; anchors agree with old clean cells within 1.4% |
+| 16 | "Collapsed runs" are occasional low-throughput runs | **Partly false** | 7 of the 11 documented were stalled runs; 4 were real full-length low runs (`BASELINE_ANALYSIS.md` 13.3) |
+| 17 | bs3200/c16/ma1000 does not beat B4 (Stage H) | **Reversed on latency** | Its reported median was a stalled run. Stage R, fixed window: latency 33.0 vs 70.8 ms confirmed, throughput not different, spread 34.5% vs 4.8%. B4 kept as baseline |
+| 18 | The Stage P block 800 / 200 ms runs stalled | **False** | A stall-classification error: re-measured over 180 s they commit steadily, with mean latency 62.4 s, longer than the 60 s run |
 
 ### 3.1 Why claims 6-8 were so convincing
 
@@ -194,6 +198,15 @@ Absolute throughput was understated roughly 2x throughout: true baseline is
 ---
 
 ## 5. Open questions
+
+> **Resolved by commit `b622edc`.** (1) The exact 2x gap: the harness
+> passed `--conf hotstuff.conf` to a client that already loads that file,
+> so the replica list doubled to 8, every command was submitted twice, and
+> the leader proposed 2x the command slots. (2) The use-after-end is fixed
+> in the same commit, and the client now counts only `decision == 1`
+> responses. (3) The logs-on/off comparison was superseded by measurements
+> on the corrected path. Current results are in `BASELINE_ANALYSIS.md`;
+> the network-latency sweep was redone as its Stage N (section 12).
 
 1. **The clean 2x gap.** True-vs-reported tps came out at 1.94 / 1.98 /
    2.03 / 1.98 across Phase 1. Truncation alone should give a
