@@ -1,0 +1,50 @@
+Stage Q: 33 runs, 11 cells
+delay verification: 33 passing, 0 failing
+
+cell                               n stalled  tps steady  spread   lat s | old published  old commits/60s
+O bs3200 ma4000 lead100 anchor     3       0      15,453    0.1%    2.07 |         15,677           15,745
+P bs6400 ma16000 lead100 anchor    3       0      29,953    0.3%    4.28 |         30,388           30,507
+O bs800 ma4000 lead200 slow        3       0       1,986    0.1%   16.13 |          2,417            2,013
+O bs3200 ma16000 lead200 slow      3       0       7,830    0.1%   16.34 |          8,943            7,787
+O bs3200 ma32000 lead100 slow      3       0      15,325    0.1%   16.71 |         17,228           15,573
+O bs3200 ma32000 lead200 slow      3       0       7,829    0.2%   32.73 |         10,882            7,787
+P bs800 ma16000 lead100 slow       3       0       3,939    0.1%   32.54 |          6,205            4,053
+P bs800 ma16000 lead200 slow       3       0       1,984    0.1%   62.42 |          9,076            2,013
+P bs1600 ma16000 lead100 slow      3       0       7,798    0.1%   16.42 |          9,259            8,027
+P bs1600 ma16000 lead200 slow      3       0       3,947    0.1%   32.40 |          6,111            3,977
+P bs3200 ma16000 lead200 slow      3       0       7,831    0.0%   16.34 |          9,085            7,787
+
+per run: tps_steady, clients committing, last commit s, longest zero-commit stretch s
+  O bs3200 ma16000 lead200 slow        7,834  clients 8  last 186.82  zero 0
+  O bs3200 ma16000 lead200 slow        7,828  clients 8  last 186.89  zero 0
+  O bs3200 ma16000 lead200 slow        7,830  clients 8  last 186.84  zero 0
+  O bs3200 ma32000 lead100 slow       15,327  clients 8  last 187.21  zero 0
+  O bs3200 ma32000 lead100 slow       15,325  clients 8  last 187.42  zero 0
+  O bs3200 ma32000 lead100 slow       15,315  clients 8  last 187.21  zero 0
+  O bs3200 ma32000 lead200 slow        7,829  clients 8  last 186.97  zero 0
+  O bs3200 ma32000 lead200 slow        7,847  clients 8  last 187.08  zero 0
+  O bs3200 ma32000 lead200 slow        7,829  clients 8  last 186.86  zero 0
+  O bs3200 ma4000 lead100 anchor     15,458  clients 8  last 186.99  zero 0
+  O bs3200 ma4000 lead100 anchor     15,453  clients 8  last 186.99  zero 0
+  O bs3200 ma4000 lead100 anchor     15,441  clients 8  last 187.03  zero 0
+  O bs800 ma4000 lead200 slow        1,986  clients 8  last 186.76  zero 0
+  O bs800 ma4000 lead200 slow        1,985  clients 8  last 187.08  zero 0
+  O bs800 ma4000 lead200 slow        1,987  clients 8  last 186.77  zero 0
+  P bs1600 ma16000 lead100 slow        7,798  clients 8  last 187.08  zero 0
+  P bs1600 ma16000 lead100 slow        7,810  clients 8  last 187.17  zero 0
+  P bs1600 ma16000 lead100 slow        7,798  clients 8  last 187.08  zero 0
+  P bs1600 ma16000 lead200 slow        3,946  clients 8  last 186.82  zero 0
+  P bs1600 ma16000 lead200 slow        3,949  clients 8  last 186.88  zero 0
+  P bs1600 ma16000 lead200 slow        3,947  clients 8  last 186.8  zero 0
+  P bs3200 ma16000 lead200 slow        7,831  clients 8  last 186.85  zero 0
+  P bs3200 ma16000 lead200 slow        7,834  clients 8  last 187.33  zero 0
+  P bs3200 ma16000 lead200 slow        7,831  clients 8  last 186.95  zero 0
+  P bs6400 ma16000 lead100 anchor     29,953  clients 8  last 186.99  zero 0
+  P bs6400 ma16000 lead100 anchor     30,003  clients 8  last 187.29  zero 0
+  P bs6400 ma16000 lead100 anchor     29,927  clients 8  last 187.24  zero 0
+  P bs800 ma16000 lead100 slow        3,938  clients 8  last 187.14  zero 0
+  P bs800 ma16000 lead100 slow        3,939  clients 8  last 187.13  zero 0
+  P bs800 ma16000 lead100 slow        3,941  clients 8  last 186.89  zero 0
+  P bs800 ma16000 lead200 slow        1,984  clients 8  last 186.81  zero 0
+  P bs800 ma16000 lead200 slow        1,985  clients 8  last 186.83  zero 0
+  P bs800 ma16000 lead200 slow        1,983  clients 8  last 186.85  zero 0

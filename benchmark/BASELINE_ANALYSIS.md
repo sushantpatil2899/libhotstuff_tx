@@ -9,13 +9,15 @@ proposer), 1 dedicated client host (node4, 64 cores), node5 as
 orchestrator. 60s runs. Stages A-H ran with no injected network
 latency; Stage N (section 12) injects it.
 
-Totals: 1,263 runs across ten sweeps. Stage F lost 7 rows to a full
+Totals: 1,425 runs across fourteen sweeps (Stages A-H, N, O, P, Q, the
+section 8 re-run and the `rr` shakedown). Stage F lost 7 rows to a full
 orchestrator disk; they were re-run. 20 Stage F parses failed for the
 same reason and were re-parsed from intact logs. Stage G logged two
 transient orchestrator SSH errors: one status-poll connection and one
 pre-run cleanup that succeeded on retry. Both rows completed, and each
-matched its sibling reps. Stage N: 340 of 340 runs clean. No other run
-errors or parse failures.
+matched its sibling reps. Stages N, O, P, Q and the `rr` shakedown ran
+without errors. No other run errors or parse failures. Separately from
+errors, 29 runs stalled (section 13).
 
 ---
 
@@ -903,8 +905,8 @@ spreads of 0.0-1.5%; the four controls, 2.7-6.5%.
 - Why that cost is flat in the delay from 50 to 200 ms.
 - Whether batching or in-flight load changes the collapsed level. Stage N
   cannot attribute it, because its baselines vary `block_size`, clients
-  and `max_async` together. Stage O separates those two axes under leader
-  delay.
+  and `max_async` together. **Measured in section 14:** `block_size`
+  changes it and `max_async` does not.
 
 ---
 
@@ -913,7 +915,7 @@ spreads of 0.0-1.5%; the four controls, 2.7-6.5%.
 ### 13.1 What was wrong
 
 Throughput was computed as commits / (last commit - first commit). That
-window cannot see idle time after the last commit. **In 32 of 1,392 runs,
+window cannot see idle time after the last commit. **In 29 of 1,392 runs,
 commits stopped early** -- in some within 0.01 s -- and the run sat idle
 for the rest of its 60 s, yet still printed a plausible, sometimes high,
 throughput.
@@ -953,10 +955,18 @@ Stage H p-values), and with stalled runs excluded. Output:
 | F | 2, both at B4 |
 | G | 8, in 8 cells |
 | H | 4, in 3 cells (including B4) |
-| P | 3, all in block_size 800 / leader 200 ms (latency 32 s) |
+| P | 0 (see below) |
 
 **B1, B2 and B3 never stalled in any stage.** B4's configuration stalled
 in 8 runs across Stages E-H.
+
+**Misclassified by this rule:** the 3 Stage P runs at block_size 800 /
+leader 200 ms, first counted as stalled. Re-measured over 180 s on the
+fixed window (Stage Q, section 14), that cell commits steadily, with no
+zero-commit second, at 1,984 tps. Its mean latency is **62.4 s, longer
+than a 60 s run**, which is what shrank its window. The rule cannot tell
+a stall from a latency that exceeds the run. It does not affect D3-H,
+where every flagged run has a mean latency under 3 s.
 
 ### 13.3 Two kinds of low run
 
@@ -1017,32 +1027,214 @@ within 6 ms of each other. Fixed-window throughput was 3,944 tps, against
 
 ---
 
-## 14. Pending
+## 14. Batching and in-flight load under leader delay (Stages O, P, Q)
+
+Section 12 found that the collapsed throughput tracks each baseline's
+in-flight budget, but the baselines vary `block_size`, clients and
+`max_async` together. These stages separate the two candidate knobs.
+Every run: 8 clients, threads 4, 90% writes, skew 0.1, fixed proposer.
+Conditions: no delay, leader (replica 1) delayed 100 ms, leader delayed
+200 ms. Every run's injected delay verified from `rtt.json` (O 63/63,
+P 54/54, Q 33/33).
+
+| stage | design | runs |
+|---|---|---|
+| O | A: `block_size` 800-6400 at `max_async` 4,000 (32,000 outstanding); B: `max_async` 4,000-32,000 at `block_size` 3200 | 63, 60 s |
+| P | `block_size` 800-25,600 at `max_async` 16,000 (128,000 outstanding) | 54, 60 s |
+| Q | the 9 O/P cells with mean latency >= 14 s, plus 2 anchor cells | 33, 180 s |
+
+### 14.1 Measurement
+
+With mean latency of 14 s or more, a 60 s run's first-to-last-commit
+window shrinks and its throughput is inflated -- by up to 4.6x in the
+worst cell. Those 9 cells were re-measured in Stage Q: 180 s runs, fixed
+window from 40 s to 2 s before the end (section 13.5), raw logs kept.
+
+The anchor cells were measured cleanly by 60 s runs. They show the two
+methods agree:
+
+| anchor | 60 s, first-to-last | Q, fixed window | difference |
+|---|---|---|---|
+| bs3200 / ma4000 / leader 100 ms | 15,677 tps, 2.08 s | 15,453 tps, 2.07 s | -1.4% |
+| bs6400 / ma16000 / leader 100 ms | 30,388 tps, 4.23 s | 29,953 tps, 4.28 s | -1.4% |
+
+Below, cells marked **Q** are Stage Q medians; all others are the 60 s
+medians. Differences under ~2% between a Q cell and a 60 s cell are within
+the method difference. All 33 Q runs had spread 0.0-0.3% and none stalled.
+
+Corrected slow cells, old against new:
+
+| cell | published (60 s) | Q throughput | Q mean latency |
+|---|---|---|---|
+| O bs800 / ma4000 / 200 ms | 2,417 | 1,986 | 16.1 s |
+| O bs3200 / ma16000 / 200 ms | 8,943 | 7,830 | 16.3 s |
+| O bs3200 / ma32000 / 100 ms | 17,228 | 15,325 | 16.7 s |
+| O bs3200 / ma32000 / 200 ms | 10,882 | 7,829 | 32.7 s |
+| P bs800 / 100 ms | 6,205 | 3,939 | 32.5 s |
+| P bs800 / 200 ms | 9,076 | 1,984 | 62.4 s |
+| P bs1600 / 100 ms | 9,259 | 7,798 | 16.4 s |
+| P bs1600 / 200 ms | 6,111 | 3,947 | 32.4 s |
+| P bs3200 / 200 ms | 9,085 | 7,831 | 16.3 s |
+
+### 14.2 `block_size` at fixed load
+
+tps / mean latency, 8 clients x `max_async` 4,000 (Stage O):
+
+| block_size | no delay | leader 100 ms | leader 200 ms |
+|---|---|---|---|
+| 800 | 349,827 / 91.2 ms | 4,215 / 7.68 s | **Q** 1,986 / 16.1 s |
+| 1,600 | 412,231 / 77.0 ms | 7,850 / 4.01 s | 4,179 / 7.80 s |
+| 3,200 | 459,225 / 69.6 ms | 15,677 / 2.08 s | 8,191 / 4.12 s |
+| 6,400 | 481,140 / 66.6 ms | 30,411 / 1.08 s | 15,871 / 2.13 s |
+
+8 clients x `max_async` 16,000 (Stage P):
+
+| block_size | no delay | leader 100 ms | leader 200 ms |
+|---|---|---|---|
+| 800 | 325,119 / 376 ms | **Q** 3,939 / 32.5 s | **Q** 1,984 / 62.4 s |
+| 1,600 | 384,297 / 282 ms | **Q** 7,798 / 16.4 s | **Q** 3,947 / 32.4 s |
+| 3,200 | 428,225 / 256 ms | 15,862 / 7.94 s | **Q** 7,831 / 16.3 s |
+| 6,400 | 435,085 / 288 ms | 30,388 / 4.23 s | 15,556 / 8.15 s |
+| 12,800 | 455,382 / 281 ms | 58,178 / 2.28 s | 31,391 / 4.36 s |
+| 25,600 | 467,040 / 275 ms | 104,333 / 1.27 s | 57,636 / 2.35 s |
+
+Throughput ratio from each block size to the next:
+
+| step | no delay (O / P) | leader 100 ms (O / P) | leader 200 ms (O / P) |
+|---|---|---|---|
+| 800 -> 1,600 | 1.18 / 1.18 | 1.86 / 1.98 | 2.10 / 1.99 |
+| 1,600 -> 3,200 | 1.11 / 1.11 | 2.00 / 2.03 | 1.96 / 1.98 |
+| 3,200 -> 6,400 | 1.05 / 1.02 | 1.94 / 1.92 | 1.94 / 1.99 |
+| 6,400 -> 12,800 | - / 1.05 | - / 1.91 | - / 2.02 |
+| 12,800 -> 25,600 | - / 1.03 | - / 1.79 | - / 1.84 |
+
+**Findings:**
+
+1. **Under leader delay, each doubling of `block_size` roughly doubles
+   throughput and halves mean latency, at both loads.** From 800 to
+   25,600 at 100 ms: 3,939 to 104,333 tps (26x), 32.5 s to 1.27 s. The
+   step ratio falls to 1.79-1.84 at the last doubling.
+2. **With no delay, the same shape appears at both loads:** +18%, +11%,
+   then +2-5% per doubling from 3,200 up.
+3. **No `block_size` restores normal service under delay.** The best
+   delayed cell, 104,333 tps at 25,600 / 100 ms, is 22% of the same
+   configuration's 467,040 tps with no delay.
+4. At 90% writes, the highest no-delay throughput measured in this
+   document is **481,140 tps at 66.6 ms** (bs6400 / 8 clients /
+   `max_async` 4,000, 3 reps; Stage G measured the same cell at 477,340).
+
+### 14.3 In-flight load at fixed `block_size`
+
+tps / mean latency, `block_size` 3200, 8 clients (Stage O; **Q** where
+re-measured):
+
+| max_async | no delay | leader 100 ms | leader 200 ms |
+|---|---|---|---|
+| 4,000 | 459,225 / 69.6 ms | 15,677 / 2.08 s | 8,191 / 4.12 s |
+| 8,000 | 415,623 / 153.7 ms | 16,145 / 4.10 s | 8,127 / 7.96 s |
+| 16,000 | 414,527 / 257.2 ms | 15,852 / 7.94 s | **Q** 7,830 / 16.3 s |
+| 32,000 | 401,480 / 374.4 ms | **Q** 15,325 / 16.7 s | **Q** 7,829 / 32.7 s |
+
+**Findings:**
+
+1. **Under leader delay, `max_async` does not change throughput.** Across
+   8x the in-flight load, 100 ms stays within 15,325-16,145 tps and 200 ms
+   within 7,829-8,191, with no consistent direction. **Latency doubles
+   with each doubling of `max_async`.**
+2. **With no delay, raising `max_async` costs throughput:** -12.6% from
+   4,000 to 32,000, while mean latency rises 5.4x.
+3. The same holds across stages on the fixed window. At `block_size` 3200
+   and 200 ms: 7,830 tps (O, `max_async` 16,000), 7,829 (O, 32,000) and
+   7,831 (P, 16,000). At 800 and 200 ms: 1,986 (O, 4,000) and 1,984 (P,
+   16,000). An 8x difference in load changes throughput by under 0.2%.
+
+### 14.4 Arithmetic on the delayed cells
+
+Recorded as arithmetic on the measurements, not as a mechanism:
+
+- In all 11 Stage Q cells, **throughput x mean latency equals
+  clients x `max_async` within 0.2%**, except bs800 / 16,000 / 200 ms
+  at -3.2%.
+- **Blocks committed per second** (throughput / `block_size`) are
+  4.68-4.92 at 100 ms and 2.45-2.48 at 200 ms in Stage Q, at every block
+  size and load. These correspond to one block per injected round trip
+  (5.0 and 2.5 per second), falling slightly as blocks grow. The 60 s
+  commit counts show the same: at 100 ms, 304 blocks per run at block
+  size 800, 292-295 at 3,200 and 244 at 25,600; at 200 ms, 151, 146-147
+  and 130.
+- In the smoke run of bs800 / 16,000 / 100 ms, commits arrived in bursts
+  of about `max_async` per client every ~32 s, and every command took
+  32.5 s (section 13.5).
+
+### 14.5 Not established
+
+- Why blocks per second under delay track the injected round trip.
+- Why the per-doubling gain falls at the largest block sizes.
+- Why raising `max_async` costs throughput with no delay.
+
+---
+
+## 15. Rotating pacemaker shakedown (`rr`)
+
+B3 (bs1600 / 8 clients / `max_async` 1,000), 4 cases x 3 reps = 12 runs,
+built with protocol logging on, so the pacemaker's rotation lines are in
+the replica logs. Numbers are therefore compared with the logged
+fixed-proposer case, not with unlogged runs.
+
+| case | pacemaker | delayed | tps median | mean latency |
+|---|---|---|---|---|
+| `dummyctl` | fixed proposer | none | 433,220 | 18.5 ms |
+| `rrctl` | `rr` | none | 430,815 | 18.6 ms |
+| `rrlead200` | `rr` | replica 1, 200 ms | 395,604 | 20.3 ms |
+| `rrfoll200` | `rr` | replica 0, 200 ms | 4,065 | 2,051.7 ms |
+
+**Findings:**
+
+1. `rr` with no delay matches the fixed proposer (-0.6%).
+2. **`rr` never rotated.** Across all 9 `rr` runs, the replica logs
+   contain zero "rotate to" lines. All four replicas log "stop rotation
+   at 0". `rr` settles on **replica 0** at startup and stays there,
+   including when replica 0 is delayed 200 ms.
+3. Under `rr`, delaying replica 1 behaves like Stage N's one delayed
+   follower (B3: 404,071 tps, 19.8 ms), and delaying replica 0 like its
+   delayed leader (4,067 tps, 2,050.4 ms, within 0.05%).
+4. Protocol logging: the logged fixed-proposer run measured 433,220 tps,
+   against 446,626 for Stage N's unlogged B3 control -- 3.0% lower, from
+   different sweeps.
+
+In the code, `rr` rotates only when a timeout fires, and every commit
+resets it (`on_consensus` in `include/hotstuff/liveness.h`;
+`reset_imp_timer` in `examples/hotstuff_app.cpp`). **Forced rotation, by
+tuning that timeout, was not measured and is not pursued** (section 16).
+
+---
+
+## 16. Pending
 
 **Measured at 3 reps only:** thread count at B1, B2 and B4; write ratio
 and skew at B3 other than the B3 skew comparison in 9.3; all Stage G
 comparisons except the two re-tested in Stage H.
 
-**Stage Q (running):** the nine Stage O/P cells with mean latency >= 14 s,
-plus one clean anchor cell per load, re-measured on the fixed window:
-180 s runs, 40 s warm-up, 2 s cool-down, raw logs kept. 33 runs.
+**Stage R (running):** B4 against bs3200 / 16 clients / `max_async` 1,000
+on the fixed window, 10 runs each, to settle section 13.4. The baselines
+stay as adopted until it is read.
 
-**Measured, not yet written up:** Stage O (`block_size` 800-6400 at 8
-clients / `max_async` 4,000, and `max_async` 4,000-32,000 at `block_size`
-3200, under no delay / leader 100 ms / leader 200 ms; 63 runs), Stage P
-(the same `block_size` sweep at `max_async` 16,000, up to 25,600; 54 runs)
-and the `rr` pacemaker shakedown (12 runs). To be written up with
-Stage Q, which re-measures their slow cells.
+**Decided, not pursued: forced leader rotation.** The `rr` shakedown
+found that `rr` settled on replica 0 and did not rotate once in 9 runs,
+including with replica 0 delayed 200 ms. `rr` rotates only when a timeout
+fires, and every commit resets it (`include/hotstuff/liveness.h`
+`on_consensus`; `examples/hotstuff_app.cpp` `reset_imp_timer`). Forcing
+rotation would mean tuning that timeout by hand. What that would do was
+not measured. Re-running Stage N under `rr` as configured would reproduce
+Stage N with the leader relabelled, so that sweep is dropped too.
 
-**Open:** the `rr` shakedown found that `rr` settles on replica 0 and
-did not rotate once, even with that replica delayed 200 ms, so re-running
-Stage N under `rr` would reproduce Stage N with the leader relabelled.
-Forcing rotation needs `base_timeout` / `prop_delay` exposed in the
-harness. Not yet decided.
+**Planned after this document is closed, in order:**
+1. reduced computational capacity on one node;
+2. failure injection: the leader failing mid-run, then a follower.
 
 ---
 
-## 15. Data
+## 17. Data
 
 | file | contents |
 |---|---|
@@ -1056,9 +1248,14 @@ harness. Not yet decided.
 | `results/stage_g_results.csv` | 216 runs, block_size 6400 extension |
 | `results/stage_h_results.csv` | 28 runs, 7-rep check of Stage G |
 | `results/stage_n_results.csv` | 340 runs, injected network latency at B1-B4 |
-| `results/stage_g_analysis.txt`, `results/stage_h_analysis.txt`, `results/stage_n_analysis.txt` | analysis output as run |
+| `results/stage_o_results.csv` | 63 runs, block_size and max_async under leader delay |
+| `results/stage_p_results.csv` | 54 runs, block_size to 25,600 under leader delay |
+| `results/stage_q_results.csv` | 33 runs, slow O/P cells on the fixed window (180 s) |
+| `results/stage_rr_results.csv` | 12 runs, `rr` pacemaker shakedown (protocol logging on) |
+| `results/stall_audit.txt` | every stage's comparisons with and without stalled runs |
+| `results/stage_g_analysis.txt`, `results/stage_h_analysis.txt`, `results/stage_n_analysis.txt`, `results/stage_{o,p,q,rr}_analysis.txt` | analysis output as run |
 | `results/run_logs/<run_id>/rtt.json` | per-run measured round trips, every pair, since commit `e01221a` |
 | `results/run_logs/` | per-run logs on node5, not in git. Since commit `d0666db`, raw client logs are replaced by `summaries.txt` once parsed |
 | `../exp3_full_results.tgz` | pre-prune archive of every run log up to the first 20 Stage F runs, 5.25 GB, not in git |
-| `analyse_stage_a.py` … `analyse_stage_n.py` | analysis scripts |
+| `analyse_stage_a.py` … `analyse_stage_rr.py`, `audit_stalls.py` | analysis scripts |
 | `make_stage_*.py` | grid generators |
