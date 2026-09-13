@@ -85,6 +85,8 @@ class BenchParameters:
             # the whole run, which is what every run before this used.
             self.meas_warmup = float(raw.get('meas_warmup', 0) or 0)
             self.meas_cooldown = float(raw.get('meas_cooldown', 0) or 0)
+            # Per-second compute counters on every host (compute_sampler.py).
+            self.sample_compute = _parse_bool(raw.get('sample_compute', False))
         except (TypeError, ValueError) as e:
             raise ConfigError(f'bench param type error: {e}')
 

@@ -606,6 +606,9 @@ class CloudLabBench:
                 ssh_host, cmd, PathMaker.replica_log_file(i),
             )
 
+        if bench.sample_compute:
+            self._start_compute_samplers(replica_pairs, client_pairs, bench)
+
         # Give replicas a moment to bind ports and accept peers before
         # we start hammering them with clients.
         sleep(3)
@@ -660,6 +663,34 @@ class CloudLabBench:
         # 4) Stop everyone (no-op for clients that already exited).
         self.kill(hosts=all_hosts, delete_logs=False)
 
+    SAMPLER = 'compute_sampler.py'
+
+    def _client_hosts(self, client_pairs):
+        return sorted({h for h, _ in client_pairs})
+
+    def _start_compute_samplers(self, replica_pairs, client_pairs, bench):
+        """Launch compute_sampler.py on every replica and client host.
+
+        Started right after the replicas boot, so t=0 of each sample file is
+        about 3 s before the clients start. Each sampler exits on its own
+        after duration + 20 s, and kill() stops any still running.
+        """
+        local = os.path.join(os.path.dirname(__file__), self.SAMPLER)
+        seconds = bench.duration + 20
+        jobs = [(h, 'hotstuff-app', PathMaker.compute_file('replica', i))
+                for i, (h, _) in enumerate(replica_pairs)]
+        jobs += [(h, 'hotstuff-client', PathMaker.compute_file('clienthost', i))
+                 for i, h in enumerate(self._client_hosts(client_pairs))]
+        for host in {h for h, _, _ in jobs}:
+            self._conn(host).put(local, remote=self.SAMPLER)
+        for host, proc, out in jobs:
+            self._background_run(
+                host,
+                f'sudo -n python3 {self.SAMPLER} --proc {proc} '
+                f'--seconds {seconds}',
+                out,
+            )
+
     @retry_on_ssh_error()
     def _download_logs(self, replica_pairs, client_pairs, bench):
         """scp replica + client logs into benchmark/logs/."""
@@ -691,6 +722,17 @@ class CloudLabBench:
                 c.get(PathMaker.client_log_file(c_idx), local=local)
             except (OSError, FileNotFoundError) as e:
                 Print.warn(f'client {c_idx} log fetch failed: {e}')
+
+        if getattr(bench, 'sample_compute', False):
+            files = [(h, PathMaker.compute_file('replica', i))
+                     for i, (h, _) in enumerate(replica_pairs)]
+            files += [(h, PathMaker.compute_file('clienthost', i))
+                      for i, h in enumerate(self._client_hosts(client_pairs))]
+            for host, path in files:
+                try:
+                    self._conn(host).get(path, local=path)
+                except (OSError, FileNotFoundError) as e:
+                    Print.warn(f'compute sample fetch failed {path}: {e}')
 
     # ------------------------------------------------------------------
     # CSV-driven entry point
@@ -960,6 +1002,7 @@ class CloudLabBench:
             'runs': row.get('runs', 1),
             'meas_warmup': row.get('meas_warmup', 0),
             'meas_cooldown': row.get('meas_cooldown', 0),
+            'sample_compute': row.get('sample_compute', False),
             'collocate_client': str(
                 row.get('collocate_client', 'true')
             ).lower() in ('true', '1', 'yes'),

@@ -113,6 +113,12 @@ class PathMaker:
         return join(PathMaker.logs_path(), f'client-{c}.log')
 
     @staticmethod
+    def compute_file(role, i):
+        """Per-host compute samples: role 'replica' (i = replica index) or
+        'clienthost' (i = position among the client hosts)."""
+        return join(PathMaker.logs_path(), f'compute-{role}-{i}.jsonl')
+
+    @staticmethod
     def run_logs_path():
         return join(PathMaker.results_path(), 'run_logs')
 

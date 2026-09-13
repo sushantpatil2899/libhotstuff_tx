@@ -259,6 +259,10 @@ class CommandMaker:
             'pkill -SIGKILL -x hotstuff-client 2>/dev/null; '
             'pkill -SIGKILL -x hotstuff-app 2>/dev/null; '
             'rm -f /tmp/hotstuff_pid_* 2>/dev/null; '
+            # compute_sampler.py runs as root. The bracket keeps the
+            # pattern from matching this very shell's command line, which
+            # contains the literal text of the pattern.
+            "sudo -n pkill -f '[c]ompute_sampler.py' 2>/dev/null; "
             'true'
         )
 
