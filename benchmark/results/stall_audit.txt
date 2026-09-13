@@ -1,0 +1,140 @@
+=== 0. stalled runs per stage ===
+  stage_a        45 runs    0 stalled  in 0 cells
+  stage_b        75 runs    0 stalled  in 0 cells
+  stage_c        48 runs    0 stalled  in 0 cells
+  stage_d3      261 runs    8 stalled  in 6 cells
+      D3_bs1600_c16_ma1000                 1/3
+      D3_bs1600_c8_ma64000                 1/3
+      D3_bs3200_c16_ma16000                2/3
+      D3_bs3200_c8_ma16000                 1/3
+      D3_bs3200_c8_ma64000                 2/3
+      D3_bs800_c16_ma64000                 1/3
+  rerun_noisy    63 runs    3 stalled  in 2 cells
+      RR_bs1600_c8_ma64000                 2/7
+      RR_bs3200_c16_ma16000                1/7
+  stage_e        96 runs    4 stalled  in 4 cells
+      E_B4_t16_skew0.1_mtx0.9              1/3
+      E_B4_t4_skew0.1_mtx0.9               1/3
+      E_B4_t4_skew0.5_mtx0.9               1/3
+      E_B4_t4_skew0.9_mtx0.9               1/3
+  stage_f        91 runs    2 stalled  in 1 cells
+      F_B4_t4_skew0.1_mtx0.9               2/7
+  stage_g       216 runs    8 stalled  in 8 cells
+      G_bs3200_c16_ma1000_t8_mtx0.1        1/3
+      G_bs3200_c16_ma1000_t8_mtx0.9        1/3
+      G_bs3200_c16_ma16000_t4_mtx0.9       1/3
+      G_bs3200_c8_ma4000_t4_mtx0.9         1/3
+      G_bs6400_c16_ma16000_t2_mtx0.9       1/3
+      G_bs6400_c16_ma16000_t8_mtx0.1       1/3
+      G_bs6400_c8_ma16000_t4_mtx0.9        1/3
+      G_bs6400_c8_ma4000_t4_mtx0.1         1/3
+  stage_h        28 runs    4 stalled  in 3 cells
+      H_bs3200_c16_ma1000                  2/7
+      H_bs3200_c16_ma4000                  1/7
+      H_bs3200_c8_ma4000                   1/7
+  stage_n       340 runs    0 stalled  in 0 cells
+  stage_o        63 runs    0 stalled  in 0 cells
+  stage_p        54 runs    3 stalled  in 1 cells
+      P_bs800_lead200                      3/3
+
+=== 1. Stage D3 edge check (means, as in analyse_stage_d3.py) ===
+  block_size  ALL 4 rising / 10 flat   CLEAN 6 rising / 8 flat  <-- CHANGED
+      rising ALL   [(8, 4000), (8, 16000), (16, 4000), (16, 64000)]
+      rising CLEAN [(8, 4000), (8, 16000), (8, 64000), (16, 4000), (16, 16000), (16, 64000)]
+  clients     ALL 0 rising / 19 flat   CLEAN 0 rising / 19 flat
+  max_async   ALL 1 rising / 24 flat   CLEAN 1 rising / 24 flat
+
+=== 2. Stage D3 / section 8 re-run: cells touched by stalls (median tps / median latency) ===
+  D3      bs800   c16  ma64000  stalled 1/3   ALL   299,364 @  2836.8 ms   CLEAN   301,899 @  2926.6 ms   spread 29.9% -> 1.7%
+  D3      bs1600  c8   ma64000  stalled 1/3   ALL   349,049 @  1033.5 ms   CLEAN   352,321 @  1090.0 ms   spread 43.6% -> 1.9%
+  D3      bs1600  c16  ma1000   stalled 1/3   ALL   435,609 @    35.8 ms   CLEAN   440,813 @    36.3 ms   spread 12.3% -> 2.4%
+  D3      bs3200  c8   ma16000  stalled 1/3   ALL   405,707 @   273.6 ms   CLEAN   403,308 @   285.1 ms   spread 8.1% -> 1.2%
+  D3      bs3200  c8   ma64000  stalled 2/3   ALL   298,717 @   782.6 ms   CLEAN   391,505 @   782.6 ms   spread 112.4% -> 0.0%
+  D3      bs3200  c16  ma16000  stalled 2/3   ALL   382,940 @   432.4 ms   CLEAN   406,934 @   551.5 ms   spread 15.7% -> 0.0%
+  re-run  bs1600  c8   ma64000  stalled 2/7   ALL   355,921 @  1000.6 ms   CLEAN   356,841 @  1000.6 ms   spread 52.1% -> 4.3%
+  re-run  bs3200  c16  ma16000  stalled 1/7   ALL   396,260 @   556.3 ms   CLEAN   397,654 @   564.1 ms   spread 34.1% -> 7.1%
+
+=== 3. Stage E factor verdicts (rep-spread rule on medians) ===
+  B4 threads      ALL sep 1.2% vs 10.3% -> not   CLEAN sep 1.0% vs 6.7% -> not
+  B4 skew         ALL sep 1.3% vs 8.3% -> not   CLEAN sep 0.7% vs 2.4% -> not
+  B4 write ratio  ALL sep 4.6% vs 8.3% -> not   CLEAN sep 4.8% vs 4.4% -> RES  <-- CHANGED
+
+=== 4. Stage F rank tests (bar p < 0.05/13 = 0.0038) ===
+  ('B4', '4', '0.1', '0.1') vs 0.9
+      ALL   n=7/7 medians 492,320 vs 459,790  p=0.0111 not
+      CLEAN n=7/5 medians 492,320 vs 458,388  p=0.0025 CONF  <-- CHANGED
+  ('B4', '4', '0.1', '0.5') vs 0.9
+      ALL   n=7/7 medians 471,657 vs 459,790  p=0.2086 not
+      CLEAN n=7/5 medians 471,657 vs 458,388  p=0.0101 not
+  adopted B4 (section 10b), 7-rep median: ALL 459,790 @ 69.6 ms   CLEAN 458,388 @ 69.8 ms
+
+=== 5. Stage G verdicts touched by stalls (rep-spread rule) ===
+  6400 vs 3200 at c8 ma4000 t4 mtx0.1
+      ALL   RES [498034, 520424]
+      CLEAN RES [498034, 518246]
+  6400 vs 3200 at c8 ma4000 t4 mtx0.9
+      ALL   not [474923, 477340]
+      CLEAN not [468918, 477340]
+  6400 vs 3200 at c8 ma16000 t4 mtx0.9
+      ALL   not [421071, 444945]
+      CLEAN not [421071, 448196]
+  6400 vs 3200 at c16 ma16000 t2 mtx0.9
+      ALL   not [74517, 407944]
+      CLEAN not [74517, 417494]
+  6400 vs 3200 at c16 ma16000 t4 mtx0.9
+      ALL   not [413330, 428238]
+      CLEAN RES [408936, 428238]  <-- CHANGED
+  6400 vs 3200 at c16 ma16000 t8 mtx0.1
+      ALL   not [418701, 424762]
+      CLEAN RES [418701, 429436]  <-- CHANGED
+  threads at bs3200 c16 ma1000 mtx0.1
+      ALL   not [380935, 536975, 522656]
+      CLEAN RES [380935, 536975, 530876]  <-- CHANGED
+  threads at bs3200 c16 ma1000 mtx0.9
+      ALL   not [371442, 482211, 477952]
+      CLEAN RES [371442, 482211, 480113]  <-- CHANGED
+  threads at bs3200 c16 ma16000 mtx0.9
+      ALL   not [74517, 413330, 394359]
+      CLEAN not [74517, 408936, 394359]
+  threads at bs3200 c8 ma4000 mtx0.9
+      ALL   RES [448095, 474923, 459058]
+      CLEAN RES [448095, 468918, 459058]
+  threads at bs6400 c16 ma16000 mtx0.1
+      ALL   RES [440320, 443395, 424762]
+      CLEAN not [440320, 443395, 429436]  <-- CHANGED
+  threads at bs6400 c16 ma16000 mtx0.9
+      ALL   not [407944, 428238, 412771]
+      CLEAN not [417494, 428238, 412771]
+  threads at bs6400 c8 ma16000 mtx0.9
+      ALL   not [426752, 444945, 434071]
+      CLEAN not [426752, 448196, 434071]
+  threads at bs6400 c8 ma4000 mtx0.1
+      ALL   RES [429985, 520424, 516025]
+      CLEAN RES [429985, 518246, 516025]
+  write ratio at bs3200 c16 ma1000 t8
+      ALL   not [522656, 477952]
+      CLEAN RES [530876, 480113]  <-- CHANGED
+  write ratio at bs3200 c16 ma16000 t4
+      ALL   not [435329, 413330]
+      CLEAN not [435329, 408936]
+  write ratio at bs3200 c8 ma4000 t4
+      ALL   RES [498034, 474923]
+      CLEAN RES [498034, 468918]
+  write ratio at bs6400 c16 ma16000 t2
+      ALL   not [440320, 407944]
+      CLEAN RES [440320, 417494]  <-- CHANGED
+  write ratio at bs6400 c16 ma16000 t8
+      ALL   not [424762, 412771]
+      CLEAN RES [429436, 412771]  <-- CHANGED
+  write ratio at bs6400 c8 ma16000 t4
+      ALL   not [462980, 444945]
+      CLEAN not [462980, 448196]
+  write ratio at bs6400 c8 ma4000 t4
+      ALL   RES [520424, 477340]
+      CLEAN RES [518246, 477340]
+
+=== 6. Stage H rank tests (bar p < 0.05/4 = 0.0125) ===
+  bs3200 c16 ma1000 vs bs3200 c8 ma4000 tps      ALL n=7/7 443,671.2 vs 461,221.9 p=0.4557 not   CLEAN n=5/6 476,782.4 vs 458,908.5 p=0.6623 not
+  bs3200 c16 ma1000 vs bs3200 c8 ma4000 latency  ALL n=7/7 35.2 vs 69.3 p=0.0262 not   CLEAN n=5/6 33.7 vs 69.7 p=0.0043 CONF  <-- CHANGED
+  bs6400 c16 ma4000 vs bs3200 c16 ma4000 tps      ALL n=7/7 446,653.3 vs 422,143.6 p=0.0006 CONF   CLEAN n=7/6 446,653.3 vs 421,544.3 p=0.0012 CONF
+  bs6400 c16 ma4000 vs bs3200 c16 ma4000 latency  ALL n=7/7 143.1 vs 151.0 p=0.0262 not   CLEAN n=7/6 143.1 vs 151.2 p=0.0012 CONF  <-- CHANGED

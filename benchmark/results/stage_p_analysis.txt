@@ -1,0 +1,75 @@
+Stage P: 54 runs, 18 cells
+
+=== 1. delay verification === passing: 54  failing: 0
+
+=== 2. trend at 128,000 outstanding (8 clients x ma 16,000) ===
+  --- no delay ---
+     block_size        tps    lat ms  spread  x previous
+            800    325,119     376.2    2.0%           -
+           1600    384,297     282.3    1.4%       1.18x
+           3200    428,225     255.6    1.4%       1.11x
+           6400    435,085     287.6    1.7%       1.02x
+          12800    455,382     281.0    1.4%       1.05x
+          25600    467,040     274.7    3.8%       1.03x
+     separation 34.1% vs worst spread 3.8%  -> RESOLVABLE
+  --- leader 100ms ---
+     block_size        tps    lat ms  spread  x previous
+            800      6,205   24363.2    6.2%           -
+           1600      9,259   14462.7    0.9%       1.49x
+           3200     15,862    7942.7    0.5%       1.71x
+           6400     30,388    4226.8    0.6%       1.92x
+          12800     58,178    2283.3    0.8%       1.91x
+          25600    104,333    1270.3    0.7%       1.79x
+     separation 262.6% vs worst spread 6.2%  -> RESOLVABLE
+  --- leader 200ms ---
+     block_size        tps    lat ms  spread  x previous
+            800      9,076   32010.4   25.9%           -
+           1600      6,111   24745.8    5.5%       0.67x
+           3200      9,085   14839.5    1.6%       1.49x
+           6400     15,556    8150.5    0.1%       1.71x
+          12800     31,391    4362.8    0.9%       2.02x
+          25600     57,636    2351.9    2.6%       1.84x
+     separation 239.9% vs worst spread 25.9%  -> RESOLVABLE
+
+=== 3. step ratios: this load vs Stage O (32,000 outstanding) ===
+  step            condition        P (128k)    O (32k)
+  800->1600       no delay            1.18x      1.18x
+  1600->3200      no delay            1.11x      1.11x
+  3200->6400      no delay            1.02x      1.05x
+  6400->12800     no delay            1.05x          -
+  12800->25600    no delay            1.03x          -
+  800->1600       leader 100ms        1.49x      1.86x
+  1600->3200      leader 100ms        1.71x      2.00x
+  3200->6400      leader 100ms        1.92x      1.94x
+  6400->12800     leader 100ms        1.91x          -
+  12800->25600    leader 100ms        1.79x          -
+  800->1600       leader 200ms        0.67x      1.73x
+  1600->3200      leader 200ms        1.49x      1.96x
+  3200->6400      leader 200ms        1.71x      1.94x
+  6400->12800     leader 200ms        2.02x          -
+  12800->25600    leader 200ms        1.84x          -
+
+=== 4. repeat check: block_size 3200 at this load, P vs Stage O ===
+  no delay      P    428,225   O    414,527   +3.3%
+  leader 100ms  P     15,862   O     15,852   +0.1%
+  leader 200ms  P      9,085   O      8,943   +1.6%
+
+=== 5. throughput x latency vs outstanding ===
+  bs800    ctl         325,119    0.376 s     122,294 vs 128,000  -4.5%
+  bs800    lead100       6,205   24.363 s     151,165 vs 128,000  +18.1%
+  bs800    lead200       9,076   32.010 s     290,513 vs 128,000  +127.0%
+  bs1600   ctl         384,297    0.282 s     108,469 vs 128,000  -15.3%
+  bs1600   lead100       9,259   14.463 s     133,912 vs 128,000  +4.6%
+  bs1600   lead200       6,111   24.746 s     151,216 vs 128,000  +18.1%
+  bs3200   ctl         428,225    0.256 s     109,467 vs 128,000  -14.5%
+  bs3200   lead100      15,862    7.943 s     125,984 vs 128,000  -1.6%
+  bs3200   lead200       9,085   14.839 s     134,823 vs 128,000  +5.3%
+  bs6400   ctl         435,085    0.288 s     125,137 vs 128,000  -2.2%
+  bs6400   lead100      30,388    4.227 s     128,444 vs 128,000  +0.3%
+  bs6400   lead200      15,556    8.150 s     126,786 vs 128,000  -0.9%
+  bs12800  ctl         455,382    0.281 s     127,947 vs 128,000  -0.0%
+  bs12800  lead100      58,178    2.283 s     132,839 vs 128,000  +3.8%
+  bs12800  lead200      31,391    4.363 s     136,952 vs 128,000  +7.0%
+  bs25600  ctl         467,040    0.275 s     128,318 vs 128,000  +0.2%
+  bs25600  lead100     104,333    1.270 s     132,533 vs 128,000  +3.5%
+  bs25600  lead200      57,636    2.352 s     135,556 vs 128,000  +5.9%

@@ -44,6 +44,12 @@ Distribution of rep spread over the 87 Stage D3 cells: **median 3.8%,
 p90 15.1%, max 112.4%**. Most of the surface is tight; a tail of nine
 cells is not.
 
+> **Correction (section 13).** Both runs pulling the second example down
+> were **stalled runs**: commits stopped early and the run sat idle, which
+> the throughput formula could not see. With stalled runs excluded, that
+> cell's one clean run is 391,505, and the D3 spread distribution is
+> **median 3.3%, p90 9.7%, max 30.6%**, with 5 cells above 15% instead of 9.
+
 ### 1b. Comparing two configurations at 7 reps
 
 The rep-spread rule above (a difference must exceed the spread of the
@@ -97,6 +103,13 @@ reps where re-run, 3 otherwise.
 | **B3** recommended | 1600 | 8 | 1,000 | **446,133** | **18.0 ms** | **0.9%** |
 | **B4** max throughput | 3200 | 8 | 4,000 | 459,963 | 69.5 ms | 1.3% |
 
+> **Correction (section 13.4).** "No other cell has both higher throughput
+> and lower latency" holds only among cells with rep spread <= 15%. Without
+> that filter, bs3200 / 16 clients / `max_async` 1,000 (7-rep median
+> 480,905 tps at 33.4 ms, spread 30.7%) has both. Its spread is not from
+> stalled runs: it had none in Stage D3 or the section 8 re-run, and its
+> low runs ran the full minute.
+
 These four were selected from Stage D3, which ran only at threads=4,
 `skew`=0.1, `mtx`=0.9. Stage F re-measured each at those settings over 7
 reps: B1 165,125 tps / 12.1 ms, B2 301,718 / 13.3 ms, B3 444,759 /
@@ -120,6 +133,10 @@ and no collapsed run:
 | 50-100 ms | bs3200 / c8 / ma4000 | 459,963 | 69.5 |
 | 100-200 ms | bs3200 / c16 / ma4000 | 416,446 | 153.1 |
 | 200+ ms | bs3200 / c8 / ma16000 | 405,707 | 273.6 |
+
+> **Correction (section 13).** Two of these cells contained a stalled run.
+> Excluded: 25-50 ms becomes 440,813 at 36.3 ms, and 200+ ms becomes
+> 403,308 at 285.1 ms. The cell chosen in each band is unchanged.
 
 Throughput varies 405k-460k across the bands while latency spans 18 ms
 to 274 ms.
@@ -297,6 +314,11 @@ because saturation was already observed to depend on location
 modest `max_async`. `clients` and `max_async` do not warrant
 extension** on this data.
 
+> **Correction (section 13).** With stalled runs excluded, `block_size`
+> is rising at **6 slices, not 4**; (8 clients, `ma`=64,000) and
+> (16 clients, `ma`=16,000) are added. `clients` (0/19) and `max_async`
+> (1/24) are unchanged.
+
 **Done in Stages G and H (section 11).** 6400 raised throughput at some
 high-client slices, confirmed at 7 reps at 16 clients / `ma`=4,000
 (+5.8%). No 6400 configuration displaced a baseline.
@@ -361,6 +383,8 @@ logs: `ncmds` equalled the configured value in every block across
    against 16 x 163% expected).
 4. Why nine cells exhibit rep spreads above 15%, up to 112.4%, while
    the median is 3.8%.
+   *Correction (section 13): with stalled runs excluded, five cells
+   exceed 15%, at most 30.6%.*
 5. What causes the collapsed runs described in section 8 -- individual
    repetitions landing at a fraction of the other runs of the same
    configuration, in cells that are otherwise tight. More repetitions
@@ -414,6 +438,14 @@ quarter of the rest. Three cells got *worse* on spread at 7 reps
 than averaging them away.
 
 Consequence: the **median** is the correct statistic for these cells.
+
+> **Correction (section 13.3).** "Collapsed runs" were two different things.
+> Of the three examples above, the 190,489 and 284,748 runs were **stalled
+> runs**: their commits stopped after 11.9 s and 0.8 s. The 73,351 run is a
+> **full-length low run**: it committed for the whole 62.3 s at a low rate.
+> Excluding stalled runs, bs1600 c8 ma64000 spreads 4.3% (not 52.1%) and
+> bs3200 c16 ma16000 spreads 7.1% (not 34.1%). bs800 c16 ma64000 had no
+> stalled run and keeps its 86.9%.
 No cause for the collapses is established. They occur at
 `max_async=64,000` in two of the three worst cases, which is a statement
 about where they were observed, not a mechanism.
@@ -491,6 +523,12 @@ difference was resolved (1.2% separation against an 8.7% spread,
 B2's Stage E ordering was non-monotonic (50% below 90%). At 7 reps it
 is monotonic: 320,475 > 311,710 > 301,718.
 
+> **Correction (section 13).** Two of B4's seven 90%-write runs in Stage F
+> were stalled runs (the 480,156 and 498,825 runs). Excluded, B4 10% vs 90%
+> writes is **492,320 vs 458,388, p = 0.0025 -- confirmed**. So the
+> write-ratio effect is confirmed at **B2 and B4**. In Stage E, B4's write
+> ratio becomes resolvable too (4.8% separation against a 4.4% spread).
+
 ### 9.3 Skew
 
 No skew comparison was resolvable at any baseline. Stage E separations:
@@ -561,6 +599,12 @@ Adopted baselines, Stage F 7-rep medians:
 These are the settings future experiments, including the
 network-latency re-run, start from.
 
+> **Correction (section 13).** B4's 90%-write cell above includes two
+> stalled runs. Its 5 clean runs give **458,388 tps, 69.8 ms mean, p95
+> 75.4, p99 90.3** (all-run figures: 459,790 / 69.6 / 76.2 / 93.1). B1, B2
+> and B3 had no stalled runs in any stage. Across Stages E-H, B4's
+> configuration stalled in 8 runs.
+
 ---
 
 ## 11. Block size extension to 6400 (Stages G and H)
@@ -587,6 +631,12 @@ ratio:
 | 6400 higher | 11 | only at 8 and 16 clients, +4.4% to +11.8% |
 | 6400 lower | 2 | 8 clients, `ma`=4,000, 2 threads: -14.3%, -8.7% |
 | not resolvable | 17 | including all 6 pairs at 4 clients |
+
+> **Correction (section 13).** Excluding stalled runs: **13 higher, 2
+> lower, 15 not resolvable**. The two added are 16 clients / `ma`=16,000
+> at 4 threads / 90% writes, and 8 threads / 10% writes. In Stage H, 6400's
+> lower latency at 16 clients / `ma`=4,000 becomes **confirmed**: 143.1 vs
+> 151.2 ms, p = 0.0012.
 
 At the adopted settings (threads 4, 90% writes), Stage G medians:
 
@@ -632,8 +682,26 @@ Throughput -3.8%, p = 0.46 -- not confirmed. Mean latency 35.2 vs
 latency (32.1-50.2 ms) than every B4 run (61.5-70.5 ms); the seventh
 collapsed to 82,600 tps at 211.1 ms.
 
-**Finding:** the Stage G result did not hold at 7 reps. Excluding the
-collapsed run, its throughput ranged 377,778-499,719. That matches its
+**Finding:** the Stage G result did not hold at 7 reps.
+
+> **Correction (section 13.4) -- this finding is reversed.** Two of the
+> candidate's seven Stage H runs were stalled runs, including its reported
+> median (443,671, whose commits stopped after 0.5 s). One of B4's was too
+> (500,229). On clean runs:
+>
+> | | clean runs | tps median | mean latency |
+> |---|---|---|---|
+> | bs3200 / 16 clients / `ma` 1,000 | 5 of 7 | 476,782 | **33.7 ms** |
+> | B4: bs3200 / 8 clients / `ma` 4,000 | 6 of 7 | 458,909 | 69.7 ms |
+> | rank test | | p = 0.66, not different | **p = 0.0043, confirmed** |
+>
+> **The candidate delivers the same throughput at half B4's latency.** It
+> stalled in 2 of 7 runs against B4's 1 of 7, and its clean runs range
+> 377,778-499,719. Whether it replaces B4 is an open decision.
+>
+> The original text follows.
+
+Excluding the collapsed run, its throughput ranged 377,778-499,719. That matches its
 earlier record: a 30.6% spread in Stage D3 and 30.7% in the section 8
 re-run. **B4 is retained.** B4's Stage H median is within 0.3% of its
 Stage F median (459,790 at 69.6 ms).
@@ -653,11 +721,21 @@ In others it did not: at bs3200 / 8 clients / `ma`=4,000 / 10% writes,
 2 threads measured highest (501,998; not resolvable). The 4- and
 8-thread medians were within 5.3% of each other in all 24 cells.
 
+> **Correction (section 13).** The -23% at bs3200 / 16 clients / `ma`=1,000
+> was not resolvable only because a stalled run sat in its 8-thread cell.
+> Excluding it, 2 threads is **resolvably lower at both write ratios**:
+> 380,935 vs 536,975 (-29.1%, 10% writes) and 371,442 vs 482,211 (-23.0%,
+> 90% writes). At bs6400 / 16 clients / `ma`=16,000 / 10% writes, the
+> thread comparison is no longer resolvable.
+
 **Write ratio.** In every one of the 35 comparisons where neither median
 is itself a collapsed run, 10% writes measured higher than 90%, by
 +1.0% to +12.4%. 16 of the 35 are resolvable. This extends section 9.2
 to every Stage G configuration; the adopted setting remains 90%
 (section 10b).
+
+> **Correction (section 13).** Excluding stalled runs, all **36**
+> comparisons have 10% writes higher, and **19** are resolvable.
 
 ### 11.4 Overlap with Stage D3
 
@@ -666,6 +744,21 @@ their Stage D3 medians. The seventh, 16 clients / `ma`=16,000, came in at
 +7.9%; its Stage G spread is 12.8%.
 
 ### 11.5 Variance and latency observations -- no explanation established
+
+> **Correction (section 13.3).** Several items below were stalled runs:
+> - of the 6 Stage G "collapsed runs", **3 were stalled runs** (244,051;
+>   247,447; 173,657) and **3 were full-length low runs** (84,180; 63,459;
+>   74,517). Stage G had 5 further stalled runs that looked normal or high.
+> - the Stage H "collapsed run" (82,600) was a stalled run.
+> - at 16 clients / `ma`=16,000, **2 of the 4 runs in the lower latency
+>   group were stalled runs** (225.1 and 225.5 ms). The remaining two ran
+>   the full minute (295.7 and 353.8 ms).
+> - the Stage H run at 74.5 ms was a stalled run. The Stage G run at
+>   63.4 ms was not: it ran the full 62.9 s.
+> - the observation that mean latency is below median at 4 clients /
+>   `ma`=16,000 involves no stalled runs.
+>
+> The original text follows.
 
 - **Collapsed runs, Stage G: 6 of 216, all at 16 clients.**
   - `ma`=1,000, 8 threads: 244,051 tps (10% writes) and 247,447 (90%),
@@ -815,22 +908,141 @@ spreads of 0.0-1.5%; the four controls, 2.7-6.5%.
 
 ---
 
-## 13. Pending
+## 13. Stalled runs: audit and corrections
+
+### 13.1 What was wrong
+
+Throughput was computed as commits / (last commit - first commit). That
+window cannot see idle time after the last commit. **In 32 of 1,392 runs,
+commits stopped early** -- in some within 0.01 s -- and the run sat idle
+for the rest of its 60 s, yet still printed a plausible, sometimes high,
+throughput.
+
+Example, Stage G `bs3200_c16_ma1000_t8_mtx0.1_r1`: 10 of 16 clients each
+committed exactly 1,000 commands (their `max_async`) within 0.01 s, the
+other 6 committed nothing, and there were no further commits in 60 s.
+Reported: 244,051 tps. Commits over the run: 9,600, about 160 tps.
+
+A smoke run of B4 on the fixed measurement (13.5) stalled on its first
+attempt: all 8 clients' last commit fell within 0.68 s of starting. The
+old formula printed 463,433 tps for it.
+
+**Why commits stop is not established.** Replica logs of the stalled B4
+run in Stage E contain no warnings or errors.
+
+### 13.2 How runs were classified
+
+A run is **stalled** when its first-to-last-commit window plus its mean
+latency is under 55 s. A short window that slow commits cannot explain
+means commits stopped. Old runs cannot be re-measured over a fixed window
+(their raw client logs were truncated, then pruned), but every run can be
+classified from its results CSV.
+
+`audit_stalls.py` re-runs each stage's comparisons with its original
+method twice: with every run, which **reproduces every published figure
+exactly** (e.g. D3's 4/10 edge check, Stage F's p = 0.0111, all four
+Stage H p-values), and with stalled runs excluded. Output:
+`results/stall_audit.txt`.
+
+| stages | stalled runs |
+|---|---|
+| A, B, C, N, O | 0 |
+| D3 | 8, in 6 cells |
+| section 8 re-run | 3, in 2 cells |
+| E | 4, all at B4 |
+| F | 2, both at B4 |
+| G | 8, in 8 cells |
+| H | 4, in 3 cells (including B4) |
+| P | 3, all in block_size 800 / leader 200 ms (latency 32 s) |
+
+**B1, B2 and B3 never stalled in any stage.** B4's configuration stalled
+in 8 runs across Stages E-H.
+
+### 13.3 Two kinds of low run
+
+What sections 8 and 11.5 called "collapsed runs" were two things:
+
+- **stalled runs**, whose commits stop early. The reported tps is
+  meaningless: it can land low, plausible or high.
+- **full-length low runs**, which commit for the whole minute at a low
+  rate. These are real measurements. Four are documented: 73,351 (re-run
+  bs800 c16 ma64000), 63,459 and 74,517 (G bs3200 c16 ma16000 t2 90%
+  writes), and 84,180 (G bs3200 c16 ma16000 t2 10% writes).
+
+Of 11 collapsed runs listed in this document, 7 were stalled runs and 4
+were full-length low runs.
+
+### 13.4 Conclusions that change
+
+| where | as published | with stalled runs excluded |
+|---|---|---|
+| 1 | D3 spread median 3.8%, p90 15.1%, max 112.4%, 9 cells > 15% | median 3.3%, p90 9.7%, max 30.6%, 5 cells > 15% |
+| 2b | frontier: B1-B4 | unchanged with the <= 15% spread filter; without it, bs3200/c16/ma1000 (480,905 @ 33.4 ms) dominates B4. Unaffected by stalls. |
+| 5 | block_size rising at 4 slices | rising at 6 |
+| 8 | variance = occasional collapsed runs | stalled runs plus full-length low runs (13.3) |
+| 9.2 / F | write ratio confirmed at B2 only | confirmed at **B2 and B4** (B4 p = 0.0025) |
+| 10b | B4 459,790 tps, 69.6 ms | 458,388 tps, 69.8 ms (5 clean runs) |
+| 11.1 / G | 6400 higher in 11 of 30 pairs | 13 of 30 |
+| 11.1 / H | 6400 latency lower not confirmed | confirmed, p = 0.0012 |
+| **11.2 / H** | **bs3200/c16/ma1000 did not beat B4; B4 retained** | **same throughput (p = 0.66) at half the latency (33.7 vs 69.7 ms, p = 0.0043); stalled 2/7 vs B4 1/7. Decision reopened.** |
+| 11.3 / G | 2 threads at bs3200/c16/ma1000 not resolvable | resolvably lower at both write ratios (-29.1%, -23.0%) |
+| 11.3 / G | write ratio: 10% higher in 35, 16 resolvable | 10% higher in all 36, 19 resolvable |
+| 11.5 | four latency observations | two were stalled runs (see the note in 11.5) |
+
+No conclusion from Stages A, B, C, N or O changes.
+
+### 13.5 The fix
+
+Commit `2c3224d`. At shutdown every client now emits, even with zero
+commits:
+
+- `[hotstuff steady]`: commits and latency inside a fixed window
+  `[meas_warmup, run - meas_cooldown]`, plus first and last commit times;
+- `[hotstuff buckets]`: commits per whole second since start.
+
+The parser adds `tps_steady`, `latency_ms_mean_steady`,
+`n_committed_steady`, `clients_committing`, `last_commit_s`,
+`longest_zero_commit_s` and `stalled` (5 or more consecutive seconds with
+zero commits across all clients). Existing fields are unchanged. Checked
+on synthetic logs: a run committing for 1 s and then stopping reads
+200,000 tps on the old formula, and 0 tps with `stalled` true on the new
+one.
+
+The smoke run of the Stage P cell block_size 800 / leader 100 ms (180 s)
+showed commits arriving in **bursts**. Each client committed about 16,000
+commands (its `max_async`) over roughly 4 s, then none for about 28 s,
+repeating about every 32 s. Every command took 32.5 s: p50 and max were
+within 6 ms of each other. Fixed-window throughput was 3,944 tps, against
+6,205 on the old formula.
+
+---
+
+## 14. Pending
+
 **Measured at 3 reps only:** thread count at B1, B2 and B4; write ratio
 and skew at B3 other than the B3 skew comparison in 9.3; all Stage G
 comparisons except the two re-tested in Stage H.
 
-**Stage O (running):** `block_size` 800-6400 at 8 clients / `max_async`
-4,000, and `max_async` 4,000-32,000 at `block_size` 3200, each with no
-delay, leader 100 ms and leader 200 ms. 21 configs x 3 reps = 63 runs.
-Separates batching from in-flight load under delay (section 12.6).
+**Stage Q (running):** the nine Stage O/P cells with mean latency >= 14 s,
+plus one clean anchor cell per load, re-measured on the fixed window:
+180 s runs, 40 s warm-up, 2 s cool-down, raw logs kept. 33 runs.
 
-**Next, agreed:** re-run the Stage N sweep with a rotating leader
-(`pace_maker = rr`) instead of the fixed proposer.
+**Measured, not yet written up:** Stage O (`block_size` 800-6400 at 8
+clients / `max_async` 4,000, and `max_async` 4,000-32,000 at `block_size`
+3200, under no delay / leader 100 ms / leader 200 ms; 63 runs), Stage P
+(the same `block_size` sweep at `max_async` 16,000, up to 25,600; 54 runs)
+and the `rr` pacemaker shakedown (12 runs). To be written up with
+Stage Q, which re-measures their slow cells.
+
+**Open:** the `rr` shakedown found that `rr` settles on replica 0 and
+did not rotate once, even with that replica delayed 200 ms, so re-running
+Stage N under `rr` would reproduce Stage N with the leader relabelled.
+Forcing rotation needs `base_timeout` / `prop_delay` exposed in the
+harness. Not yet decided.
 
 ---
 
-## 14. Data
+## 15. Data
 
 | file | contents |
 |---|---|

@@ -1,0 +1,21 @@
+12 runs, 4 cases
+
+case          n   tps median   lat ms  spread  rotations  settled proposer (count over reps)
+dummyctl      3      433,220     18.5    2.0%          0  none logged
+rrctl         3      430,815     18.6    2.2%          0  {'0': 12}
+rrlead200     3      395,604     20.3    2.9%          0  {'0': 12}
+rrfoll200     3        4,065   2051.7    0.0%          0  {'0': 12}
+
+per run:
+  dummyctl     r1       424,758    18.9 ms  rotate_to={}  stop_at={}
+  dummyctl     r2       433,220    18.5 ms  rotate_to={}  stop_at={}
+  dummyctl     r3       433,424    18.5 ms  rotate_to={}  stop_at={}
+  rrctl        r1       423,288    18.9 ms  rotate_to={}  stop_at={'0': 4}
+  rrctl        r2       432,512    18.5 ms  rotate_to={}  stop_at={'0': 4}
+  rrctl        r3       430,815    18.6 ms  rotate_to={}  stop_at={'0': 4}
+  rrlead200    r1       387,515    20.7 ms  rotate_to={}  stop_at={'0': 4}
+  rrlead200    r2       395,604    20.3 ms  rotate_to={}  stop_at={'0': 4}
+  rrlead200    r3       399,016    20.1 ms  rotate_to={}  stop_at={'0': 4}
+  rrfoll200    r1         4,065  2051.7 ms  rotate_to={}  stop_at={'0': 4}
+  rrfoll200    r2         4,065  2051.7 ms  rotate_to={}  stop_at={'0': 4}
+  rrfoll200    r3         4,064  2052.3 ms  rotate_to={}  stop_at={'0': 4}
