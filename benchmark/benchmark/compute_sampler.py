@@ -13,7 +13,8 @@ tick does not corrupt a value, only widens the interval it covers.
 Recorded each second:
   procs     per process named --proc (matched on /proc/PID/comm exactly):
             utime+stime ticks, voluntary / involuntary context switches,
-            RSS, and per-thread ticks with each thread's name
+            RSS, allowed CPU list (process, and the distinct lists across
+            its threads), and per-thread ticks with each thread's name
   host_cpu  /proc/stat aggregate cpu line (ticks by state)
   psi       /proc/pressure/cpu "some" and "full" totals (microseconds)
   energy    RAPL package energy (microjoules) and its wrap-around range
@@ -65,15 +66,25 @@ def _proc(pid):
             out['nvcs'] = int(v)
         elif k == 'VmRSS':
             out['rss_kb'] = int(v.split()[0])
+        elif k == 'Cpus_allowed_list':
+            out['cpus'] = v.strip()
     try:
         tids = os.listdir(f'/proc/{pid}/task')
     except OSError:
         tids = []
+    thread_cpus = set()
     for tid in tids:
         t = _read(f'/proc/{pid}/task/{tid}/stat')
         comm = _read(f'/proc/{pid}/task/{tid}/comm')
         if t is not None:
             out['threads'][tid] = [(comm or '?').strip(), _stat_ticks(t)]
+        ts = _read(f'/proc/{pid}/task/{tid}/status') or ''
+        for line in ts.splitlines():
+            if line.startswith('Cpus_allowed_list:'):
+                thread_cpus.add(line.split(':', 1)[1].strip())
+    # Distinct affinity lists across the process's threads: one entry when
+    # every thread inherited the same mask, which is what pinning must show.
+    out['thread_cpus'] = sorted(thread_cpus)
     return out
 
 

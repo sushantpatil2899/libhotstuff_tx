@@ -601,6 +601,7 @@ class CloudLabBench:
                 conf_file=PathMaker.replica_conf_file(i),
                 max_rep_msg=protocol.max_rep_msg,
                 max_cli_msg=protocol.max_cli_msg,
+                cpu_cores=bench.cpu_cores.get(i, 0),
             )
             self._background_run(
                 ssh_host, cmd, PathMaker.replica_log_file(i),
@@ -1003,6 +1004,7 @@ class CloudLabBench:
             'meas_warmup': row.get('meas_warmup', 0),
             'meas_cooldown': row.get('meas_cooldown', 0),
             'sample_compute': row.get('sample_compute', False),
+            **{k: v for k, v in row.items() if k.startswith('cpu_node')},
             'collocate_client': str(
                 row.get('collocate_client', 'true')
             ).lower() in ('true', '1', 'yes'),

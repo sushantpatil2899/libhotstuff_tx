@@ -87,6 +87,10 @@ class BenchParameters:
             self.meas_cooldown = float(raw.get('meas_cooldown', 0) or 0)
             # Per-second compute counters on every host (compute_sampler.py).
             self.sample_compute = _parse_bool(raw.get('sample_compute', False))
+            # Physical cores each replica is pinned to (cpu_node<i>); 0 means
+            # unrestricted. See CommandMaker.run_replica.
+            self.cpu_cores = {i: int(raw.get(f'cpu_node{i}', 0) or 0)
+                              for i in range(self.nodes)}
         except (TypeError, ValueError) as e:
             raise ConfigError(f'bench param type error: {e}')
 
@@ -95,6 +99,8 @@ class BenchParameters:
         _require(self.max_async >= 1, 'max_async must be >= 1')
         _require(self.duration >= 1, 'duration must be >= 1')
         _require(self.runs >= 1, 'runs must be >= 1')
+        _require(all(0 <= n <= 31 for n in self.cpu_cores.values()),
+                 'cpu_node<i> must be 0 (unrestricted) or 1-31 cores')
         _require(0 <= self.meas_warmup and 0 <= self.meas_cooldown
                  and self.meas_warmup + self.meas_cooldown < self.duration,
                  'meas_warmup + meas_cooldown must be >= 0 and < duration')

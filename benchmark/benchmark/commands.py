@@ -168,8 +168,19 @@ class CommandMaker:
     # ---------- Per-run launch + teardown (on remote hosts) ----------
 
     @staticmethod
+    def cpu_list(cores):
+        """taskset CPU list for ``cores`` physical cores, or '' if 0.
+
+        On the d6515 nodes logical CPUs 0-31 are distinct physical cores
+        and 32-63 their SMT siblings (lscpu -e), so 1..N is N physical
+        cores with no siblings. CPU 0 is left out. Neither libhotstuff nor
+        salticidae sets affinity, so every thread inherits the mask.
+        """
+        return f'1-{int(cores)}' if cores else ''
+
+    @staticmethod
     def run_replica(repo_dir, conf_file, *, max_rep_msg=None,
-                    max_cli_msg=None):
+                    max_cli_msg=None, cpu_cores=0):
         """Launch a single ``hotstuff-app`` replica from $HOME.
 
         Configs are scp'd into the remote ``$HOME`` (Fabric default), so
@@ -194,9 +205,11 @@ class CommandMaker:
         # practice, unlike the local orchestrator path gen_conf() above
         # has to handle.
         bin_path = join(repo_dir, 'examples', 'hotstuff-app')
+        pin = (f'taskset -c {CommandMaker.cpu_list(cpu_cores)} '
+               if cpu_cores else '')
         return (
             f"bash -lc 'ulimit -s unlimited && "
-            f"./{bin_path} --conf {conf_file}{extra}'"
+            f"{pin}./{bin_path} --conf {conf_file}{extra}'"
         )
 
     @staticmethod
