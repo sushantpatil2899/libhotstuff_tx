@@ -1273,6 +1273,16 @@ rotation would mean tuning that timeout by hand. What that would do was
 not measured. Re-running Stage N under `rr` as configured would reproduce
 Stage N with the leader relabelled, so that sweep is dropped too.
 
+**Conventions for every later phase**, from what this document found:
+- report `tps_steady` and `latency_ms_mean_steady`, never the legacy `tps`
+  (section 13);
+- set `meas_warmup` above the expected latency, and make the run long
+  enough to cover several commit cycles after it (section 14.1);
+- count stalled runs per cell, and run a no-fault control per baseline in
+  the same sweep. B4 stalled in 5 of 33 runs with no fault injected;
+  B1-B3 never did (13.2, 13.6);
+- verify injected conditions per run, as `rtt.json` does for delay.
+
 **Planned after this document is closed, in order:**
 1. reduced computational capacity on one node;
 2. failure injection: the leader failing mid-run, then a follower.
