@@ -75,6 +75,11 @@ def _atomic_write(path, content):
 
 
 SUMMARY_FILE = 'summaries.txt'
+# Client aggregate lines copied into summaries.txt before the raw logs are
+# deleted. The steady-state line and histogram are what distinguish a
+# stalled run from a slow one, so they are kept alongside the summary.
+KEEP_MARKERS = ('[hotstuff summary]', '[hotstuff steady]',
+                '[hotstuff buckets]')
 
 
 def _prune_client_logs(run_dir):
@@ -105,7 +110,7 @@ def _prune_client_logs(run_dir):
         try:
             with open(path, 'r', errors='replace') as f:
                 for line in f:
-                    if '[hotstuff summary]' in line:
+                    if any(m in line for m in KEEP_MARKERS):
                         lines.append(f'{name}: {line.rstrip()}')
         except OSError:
             return 0

@@ -201,7 +201,7 @@ class CommandMaker:
 
     @staticmethod
     def run_client(repo_dir, conf_file, *, cid, iter_count, max_async,
-                   max_cli_msg=None):
+                   max_cli_msg=None, meas_warmup=0, meas_cooldown=0):
         """Launch one ``hotstuff-client`` process from $HOME.
 
         Same conf placement convention as ``run_replica``. ``iter_count``
@@ -232,6 +232,8 @@ class CommandMaker:
         extra = ''
         if max_cli_msg is not None:
             extra += f' --max-cli-msg {int(max_cli_msg)}'
+        extra += (f' --meas-warmup {float(meas_warmup)}'
+                  f' --meas-cooldown {float(meas_cooldown)}')
         bin_path = join(repo_dir, 'examples', 'hotstuff-client')
         return (
             f"bash -lc './{bin_path} "

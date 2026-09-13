@@ -81,6 +81,10 @@ class BenchParameters:
             self.duration = int(raw['duration'])
             self.runs = int(raw.get('runs', 1))
             self.collocate_client = _parse_bool(raw.get('collocate_client', True))
+            # Steady-state window, seconds from client start. 0/0 means
+            # the whole run, which is what every run before this used.
+            self.meas_warmup = float(raw.get('meas_warmup', 0) or 0)
+            self.meas_cooldown = float(raw.get('meas_cooldown', 0) or 0)
         except (TypeError, ValueError) as e:
             raise ConfigError(f'bench param type error: {e}')
 
@@ -89,6 +93,9 @@ class BenchParameters:
         _require(self.max_async >= 1, 'max_async must be >= 1')
         _require(self.duration >= 1, 'duration must be >= 1')
         _require(self.runs >= 1, 'runs must be >= 1')
+        _require(0 <= self.meas_warmup and 0 <= self.meas_cooldown
+                 and self.meas_warmup + self.meas_cooldown < self.duration,
+                 'meas_warmup + meas_cooldown must be >= 0 and < duration')
 
 
 class ProtocolParameters:

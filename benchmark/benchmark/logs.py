@@ -62,6 +62,23 @@ _RE_SUMMARY = re.compile(
 )
 
 
+# Steady-state aggregates over a fixed window (see hotstuff_client.cpp).
+# Emitted by every client, including one that committed nothing.
+_RE_STEADY = re.compile(
+    r'\[hotstuff steady\] start=([0-9.]+) run=([0-9.]+) warmup=([0-9.]+) '
+    r'cooldown=([0-9.]+) span=([0-9.]+) n=(\d+) mean=([0-9.]+) '
+    r'p50=([0-9.]+) p95=([0-9.]+) p99=([0-9.]+) max=([0-9.]+) '
+    r'first_commit=(-?[0-9.]+) last_commit=(-?[0-9.]+)'
+)
+_RE_BUCKETS = re.compile(r'\[hotstuff buckets\] counts=([0-9,]+)')
+
+# A run is flagged stalled when the clients together committed nothing for
+# at least this many consecutive whole seconds inside the measurement
+# window. Chosen well above the longest commit interval measured anywhere
+# (~0.4 s, one block per injected 200 ms round trip in Stage N).
+STALL_ZERO_SECONDS = 5
+
+
 class ParseError(Exception):
     pass
 
@@ -113,8 +130,25 @@ class LogParser:
         timestamps = []
         latencies = []
         summary = None
+        steady = None
+        buckets = None
         with open(path, 'r', errors='replace') as f:
             for line in f:
+                if steady is None:
+                    mt = _RE_STEADY.search(line)
+                    if mt:
+                        g = [float(x) for x in mt.groups()]
+                        steady = dict(zip(
+                            ('start', 'run', 'warmup', 'cooldown', 'span',
+                             'n', 'mean', 'p50', 'p95', 'p99', 'max',
+                             'first_commit', 'last_commit'), g))
+                        steady['n'] = int(steady['n'])
+                        continue
+                if buckets is None:
+                    mb = _RE_BUCKETS.search(line)
+                    if mb:
+                        buckets = [int(x) for x in mb.group(1).split(',')]
+                        continue
                 if summary is None:
                     ms = _RE_SUMMARY.search(line)
                     if ms:
@@ -140,7 +174,9 @@ class LogParser:
                 latencies.append(lat)
         timestamps.sort()
         latencies.sort()
-        return timestamps, latencies, summary
+        if steady is not None:
+            steady['buckets'] = buckets or []
+        return timestamps, latencies, summary, steady
 
     @staticmethod
     def _read_replica_log(path):
@@ -174,8 +210,8 @@ class LogParser:
         for p in client_paths:
             client_samples.append(cls._read_client_log(p))
 
-        total = sum(len(ts) for ts, _, _ in client_samples)
-        if total == 0:
+        total = sum(len(c[0]) for c in client_samples)
+        if total == 0 and not any(c[3] for c in client_samples):
             raise ParseError(
                 f'parsed {len(client_paths)} client log(s) under {directory} '
                 'but found zero commit lines — did you build with '
@@ -195,7 +231,7 @@ class LogParser:
     def _aggregate(self):
         all_ts = []
         all_lat = []
-        for ts, lat, _ in self.client_samples:
+        for ts, lat, _, _ in self.client_samples:
             all_ts.extend(ts)
             all_lat.extend(lat)
         all_ts.sort()
@@ -228,7 +264,7 @@ class LogParser:
         # from are truncated whenever the shutdown dump loses its race
         # with SIGKILL, which silently caps n_committed and makes tps a
         # rate over only the run's opening seconds.
-        summaries = [sm for _, _, sm in self.client_samples if sm]
+        summaries = [sm for _, _, sm, _ in self.client_samples if sm]
         if summaries and len(summaries) == len(self.client_samples):
             n_committed = sum(sm['n'] for sm in summaries)
             window = max(sm['window'] for sm in summaries)
@@ -245,7 +281,10 @@ class LogParser:
                                  summaries[0]['p99'])
             truncated = n_committed > len(all_ts)
 
+        steady = self._steady()
+
         return {
+            **steady,
             'tps': round(tps, 2),
             'latency_ms_mean': round(lat_mean_ms, 3),
             'latency_ms_p50': round(p50 * 1_000, 3),
@@ -258,6 +297,62 @@ class LogParser:
             'n_clients': len(self.client_samples),
             'n_replicas_booted': self.replica_booted,
         }
+
+    def _steady(self):
+        """Metrics over each client's fixed steady-state window.
+
+        Present only when every client emitted a steady line. Client rates
+        are summed, since the clients run concurrently. Latency percentiles
+        are exact only for one client; with several, the worst client's
+        p99 is reported instead, labelled as such.
+
+        Stall detection sums the per-second histograms on a common clock
+        (each client's own start time) and finds the longest run of
+        whole seconds with zero commits inside the window every client
+        covers.
+        """
+        st = [c[3] for c in self.client_samples]
+        if not st or any(x is None for x in st):
+            return {}
+        n = sum(x['n'] for x in st)
+        tps = sum(x['n'] / x['span'] for x in st if x['span'] > 0)
+        mean_ms = (sum(x['mean'] * x['n'] for x in st) / n * 1_000) if n else 0.0
+        t0 = min(x['start'] for x in st)
+        lo = max(x['start'] + x['warmup'] for x in st) - t0
+        hi = min(x['start'] + x['run'] - x['cooldown'] for x in st) - t0
+        total = {}
+        for x in st:
+            off = x['start'] - t0
+            for i, c in enumerate(x['buckets']):
+                sec = int(off + i)
+                total[sec] = total.get(sec, 0) + c
+        longest = cur = 0
+        for sec in range(int(math.ceil(lo)), int(math.floor(hi))):
+            if total.get(sec, 0) == 0:
+                cur += 1
+                longest = max(longest, cur)
+            else:
+                cur = 0
+        commits = [x for x in st if x['first_commit'] >= 0]
+        out = {
+            'tps_steady': round(tps, 2),
+            'latency_ms_mean_steady': round(mean_ms, 3),
+            'n_committed_steady': n,
+            'steady_span_s': round(st[0]['span'], 2) if len(st) == 1
+                             else round(min(x['span'] for x in st), 2),
+            'clients_committing': len(commits),
+            'last_commit_s': round(max((x['last_commit'] for x in commits),
+                                       default=-1), 2),
+            'longest_zero_commit_s': longest,
+            'stalled': longest >= STALL_ZERO_SECONDS,
+        }
+        if len(st) == 1:
+            out.update(latency_ms_p50_steady=round(st[0]['p50'] * 1_000, 3),
+                       latency_ms_p99_steady=round(st[0]['p99'] * 1_000, 3))
+        else:
+            out['latency_ms_p99_steady_worst_client'] = round(
+                max(x['p99'] for x in st) * 1_000, 3)
+        return out
 
     def result(self):
         d = self.result_dict()

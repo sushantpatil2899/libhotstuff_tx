@@ -20,6 +20,7 @@
 #include <memory>
 #include <algorithm>
 #include <vector>
+#include <string>
 #include <signal.h>
 #include <sys/time.h>
 
@@ -69,6 +70,10 @@ std::unordered_map<ReplicaID, Net::conn_t> conns;
 std::unordered_map<const uint256_t, Request> waiting;
 std::vector<NetAddr> replicas;
 std::vector<std::pair<struct timeval, double>> elapsed;
+/* Wall-clock time just before the first submission. Commit timestamps are
+   measured against it for the steady-state window and the per-second
+   histogram emitted at shutdown. */
+struct timeval run_start;
 std::unique_ptr<Net> mn;
 SmallBankManager *small_bank_manager;
 
@@ -160,6 +165,11 @@ int main(int argc, char **argv) {
     auto opt_max_async_num = Config::OptValInt::create(10);
     auto opt_cid = Config::OptValInt::create(-1);
     auto opt_max_cli_msg = Config::OptValInt::create(65536); // 64K by default
+    /* Steady-state measurement window, in seconds from run_start: commits
+       in [warmup, run - cooldown] are counted. Both default to 0, i.e.
+       the whole run. */
+    auto opt_meas_warmup = Config::OptValDouble::create(0);
+    auto opt_meas_cooldown = Config::OptValDouble::create(0);
 
     auto shutdown = [&](int) { ec.stop(); };
     salticidae::SigEvent ev_sigint(ec, shutdown);
@@ -181,6 +191,8 @@ int main(int argc, char **argv) {
     config.add_opt("iter", opt_max_iter_num, Config::SET_VAL);
     config.add_opt("max-async", opt_max_async_num, Config::SET_VAL);
     config.add_opt("max-cli-msg", opt_max_cli_msg, Config::SET_VAL, 'S', "the maximum client message size");
+    config.add_opt("meas-warmup", opt_meas_warmup, Config::SET_VAL);
+    config.add_opt("meas-cooldown", opt_meas_cooldown, Config::SET_VAL);
     config.parse(argc, argv);
     auto idx = opt_idx->get();
     max_iter_num = opt_max_iter_num->get();
@@ -211,6 +223,7 @@ int main(int argc, char **argv) {
     small_bank_manager = new SmallBankManager(opt_sb_users->get(), opt_sb_prob_choose_mtx->get(), opt_sb_skew_factor->get());
 
     connect_all();
+    gettimeofday(&run_start, nullptr);
     while (try_send());
     ec.dispatch();
 
@@ -246,6 +259,72 @@ int main(int argc, char **argv) {
                 "p50=%.6f p95=%.6f p99=%.6f max=%.6f\n",
                 elapsed.size(), window, sum / elapsed.size(),
                 p50, p95, p99, mx);
+        fflush(stderr);
+    }
+    /* Steady-state line and per-second histogram, emitted even when this
+       client committed nothing.
+
+       The summary above divides by first-to-last commit, which cannot see
+       idle time after the last commit: runs in which commits stopped
+       within the first second still printed plausible, sometimes high,
+       throughput. Here the denominator is a window fixed by the run's own
+       length and the requested warmup/cooldown, so a stall reads as low
+       throughput, and the histogram shows exactly when commits stopped.
+       A client with no commits still reports n=0, so the parser can tell
+       it apart from a client whose log is missing. */
+    {
+        struct timeval run_end;
+        gettimeofday(&run_end, nullptr);
+        auto tsec = [](const struct timeval &t) {
+            return t.tv_sec + t.tv_usec * 1e-6;
+        };
+        double t0 = tsec(run_start);
+        double run = tsec(run_end) - t0;
+        double lo = opt_meas_warmup->get();
+        double hi = run - opt_meas_cooldown->get();
+        double span = hi > lo ? hi - lo : 0;
+        size_t nbuckets = run > 0 ? (size_t)run + 1 : 1;
+        std::vector<size_t> buckets(nbuckets, 0);
+        std::vector<double> wl;
+        double wsum = 0, first_commit = -1, last_commit = -1;
+        for (const auto &e: elapsed)
+        {
+            double off = tsec(e.first) - t0;
+            if (first_commit < 0) first_commit = off;
+            last_commit = off;
+            if (off >= 0 && (size_t)off < nbuckets) buckets[(size_t)off]++;
+            if (off >= lo && off <= hi)
+            {
+                wl.push_back(e.second);
+                wsum += e.second;
+            }
+        }
+        double w50 = 0, w95 = 0, w99 = 0, wmax = 0;
+        if (!wl.empty())
+        {
+            auto wpct = [&wl](double q) {
+                size_t k = (size_t)(q * (wl.size() - 1));
+                std::nth_element(wl.begin(), wl.begin() + k, wl.end());
+                return wl[k];
+            };
+            w50 = wpct(0.50); w95 = wpct(0.95); w99 = wpct(0.99);
+            wmax = *std::max_element(wl.begin(), wl.end());
+        }
+        fprintf(stderr,
+                "[hotstuff steady] start=%.6f run=%.6f warmup=%.6f "
+                "cooldown=%.6f span=%.6f n=%zu mean=%.6f p50=%.6f "
+                "p95=%.6f p99=%.6f max=%.6f first_commit=%.6f "
+                "last_commit=%.6f\n",
+                t0, run, opt_meas_warmup->get(), opt_meas_cooldown->get(),
+                span, wl.size(), wl.empty() ? 0.0 : wsum / wl.size(),
+                w50, w95, w99, wmax, first_commit, last_commit);
+        std::string counts;
+        for (size_t i = 0; i < nbuckets; i++)
+        {
+            if (i) counts += ',';
+            counts += std::to_string(buckets[i]);
+        }
+        fprintf(stderr, "[hotstuff buckets] counts=%s\n", counts.c_str());
         fflush(stderr);
     }
     for (const auto &e: elapsed)

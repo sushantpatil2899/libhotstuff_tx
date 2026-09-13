@@ -96,6 +96,20 @@ RESULT_COLUMNS = (
     'raw_dump_truncated',
     'n_clients',
     'n_replicas_booted',
+    # Fixed-window metrics, see logs.LogParser._steady.
+    # tps above divides by first-to-last commit and cannot see a stall;
+    # these divide by a window fixed by the run's length.
+    'tps_steady',
+    'latency_ms_mean_steady',
+    'latency_ms_p50_steady',
+    'latency_ms_p99_steady',
+    'latency_ms_p99_steady_worst_client',
+    'n_committed_steady',
+    'steady_span_s',
+    'clients_committing',
+    'last_commit_s',
+    'longest_zero_commit_s',
+    'stalled',
     'status',
 )
 
@@ -607,6 +621,8 @@ class CloudLabBench:
                 iter_count=bench.iter_count,
                 max_async=bench.max_async,
                 max_cli_msg=protocol.max_cli_msg,
+                meas_warmup=bench.meas_warmup,
+                meas_cooldown=bench.meas_cooldown,
             )
             self._background_run(
                 ssh_host, cmd, PathMaker.client_log_file(c_idx),
@@ -942,6 +958,8 @@ class CloudLabBench:
             'max_async': row['max_async'],
             'duration': row.get('duration', 60),
             'runs': row.get('runs', 1),
+            'meas_warmup': row.get('meas_warmup', 0),
+            'meas_cooldown': row.get('meas_cooldown', 0),
             'collocate_client': str(
                 row.get('collocate_client', 'true')
             ).lower() in ('true', '1', 'yes'),
