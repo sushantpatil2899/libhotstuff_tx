@@ -1,0 +1,212 @@
+Stage K: 740 runs, 148 cells
+
+=== 1. pinning verification === runs passing: 740  failing: 0
+
+=== 2. per baseline (medians over non-stalled runs) ===
+
+########## B1 bs200 c2 ma1000 ##########
+  control:    170,806 tps      11.7 ms  spread 3.8%  stalled 0/5
+  --- leader pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    164,229    -3.9%      12.2       4%    5.2%   0/5  not resolvable r1 1.82/41/2.6
+         6    165,045    -3.4%      12.1       3%   15.2%   0/5  not resolvable r1 1.79/39/4.7
+         4    168,606    -1.3%      11.9       1%    4.7%   0/5  not resolvable r1 1.72/37/15.3
+         3    168,219    -1.5%      11.9       2%    4.1%   0/5  not resolvable r1 1.49/31/20.8
+         2    158,804    -7.0%      12.6       8%    4.5%   0/5  RESOLVABLE     r1 1.43/28/48.2
+         1    130,433   -23.6%      15.3      31%    7.5%   0/5  RESOLVABLE     r1 1.00/17/97.4
+  --- follower 0 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    165,981    -2.8%      12.0       3%    5.6%   0/5  not resolvable r0 1.76/37/1.6
+         6    167,785    -1.8%      11.9       2%   13.4%   0/5  not resolvable r0 1.67/36/2.2
+         4    165,254    -3.3%      12.1       3%    3.3%   0/5  not resolvable r0 1.53/33/9.4
+         3    164,294    -3.8%      12.2       4%    9.4%   0/5  not resolvable r0 1.36/27/15.4
+         2    174,839     2.4%      11.4      -2%    6.6%   0/5  not resolvable r0 1.31/24/40.1
+         1    165,355    -3.2%      12.1       3%    3.4%   0/5  not resolvable r0 1.00/23/95.5
+  --- follower 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    163,831    -4.1%      12.2       4%    7.0%   0/5  not resolvable r3 2.37/48/1.8
+         6    163,962    -4.0%      12.2       4%    4.3%   0/5  not resolvable r3 2.50/61/3.0
+         4    169,509    -0.8%      11.8       1%    9.7%   0/5  not resolvable r3 2.22/46/16.7
+         3    169,362    -0.8%      11.8       1%    6.6%   0/5  not resolvable r3 1.90/37/23.3
+         2    168,489    -1.4%      11.9       1%    7.1%   0/5  not resolvable r3 1.89/36/73.5
+         1    179,199     4.9%       9.9     -15%    3.0%   0/5  RESOLVABLE     r3 1.00/16/97.8
+  --- leader + follower 0 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    164,035    -4.0%      12.2       4%    8.7%   0/5  not resolvable r1 1.89/40/3.0  r0 1.69/37/1.9
+         6    169,030    -1.0%      11.8       1%    7.0%   0/5  not resolvable r1 1.76/40/4.7  r0 1.66/36/2.0
+         4    162,626    -4.8%      12.3       5%    6.5%   0/5  not resolvable r1 1.65/38/13.2  r0 1.51/33/8.5
+         3    168,218    -1.5%      11.9       2%    6.9%   0/5  not resolvable r1 1.51/32/20.5  r0 1.38/28/14.3
+         2    155,532    -8.9%      12.9      10%    4.5%   0/5  RESOLVABLE     r1 1.41/27/47.4  r0 1.28/24/37.6
+         1    130,832   -23.4%      15.3      31%    3.9%   0/5  RESOLVABLE     r1 1.00/18/97.0  r0 0.98/18/93.7
+  --- leader + follower 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    165,747    -3.0%      12.1       3%    3.6%   0/5  not resolvable r1 1.84/40/2.3  r3 2.46/51/1.6
+         6    168,362    -1.4%      11.9       1%    5.8%   0/5  not resolvable r1 1.75/38/4.5  r3 2.30/45/2.9
+         4    168,997    -1.1%      11.8       1%    6.8%   0/5  not resolvable r1 1.72/38/14.2  r3 2.17/43/16.1
+         3    169,599    -0.7%      11.8       1%   11.0%   0/5  not resolvable r1 1.53/32/19.4  r3 1.96/38/24.5
+         2    154,318    -9.7%      13.0      11%    6.1%   0/5  RESOLVABLE     r1 1.43/28/46.0  r3 1.82/39/69.9
+         1    126,090   -26.2%      15.7      34%    6.5%   0/5  RESOLVABLE     r1 0.99/18/96.4  r3 1.00/20/97.3
+  --- leader + followers 0, 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    171,072     0.2%      11.7      -0%    5.1%   0/5  not resolvable r1 1.85/42/2.0  r0 1.75/37/1.5  r3 2.42/47/1.8
+         6    165,862    -2.9%      12.1       3%   12.8%   0/5  not resolvable r1 1.77/39/3.9  r0 1.68/35/2.0  r3 2.34/47/3.0
+         4    168,232    -1.5%      11.9       2%    4.4%   0/5  not resolvable r1 1.70/38/12.9  r0 1.58/34/8.9  r3 2.24/45/15.7
+         3    167,846    -1.7%      11.9       2%   12.1%   0/5  not resolvable r1 1.48/31/18.9  r0 1.39/28/14.3  r3 2.01/39/26.9
+         2    151,904   -11.1%      13.2      12%   32.0%   0/5  not resolvable r1 1.39/27/46.0  r0 1.27/24/37.2  r3 1.78/37/65.1
+         1    132,095   -22.7%      15.1      29%    4.2%   0/5  RESOLVABLE     r1 0.99/18/95.4  r0 0.97/18/92.9  r3 1.00/20/96.9
+
+########## B2 bs800 c4 ma1000 ##########
+  control:    308,603 tps      13.0 ms  spread 8.3%  stalled 0/5
+  --- leader pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    307,196    -0.5%      13.0       0%    4.0%   0/5  not resolvable r1 2.99/62/4.0
+         6    308,687     0.0%      13.0      -0%    9.8%   0/5  not resolvable r1 2.86/57/8.4
+         4    298,952    -3.1%      13.4       3%    5.7%   0/5  not resolvable r1 2.57/52/27.8
+         3    305,444    -1.0%      13.1       1%    2.9%   0/5  not resolvable r1 2.14/41/38.7
+         2    276,867   -10.3%      14.4      11%    4.9%   0/5  RESOLVABLE     r1 1.81/32/73.4
+         1    183,527   -40.5%      21.8      68%    5.5%   0/5  RESOLVABLE     r1 1.00/17/97.4
+  --- follower 0 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    302,504    -2.0%      13.2       2%    8.2%   0/5  not resolvable r0 2.92/61/3.0
+         6    304,931    -1.2%      13.1       1%    6.2%   0/5  not resolvable r0 2.73/55/6.3
+         4    311,590     1.0%      12.8      -1%    8.0%   0/5  not resolvable r0 2.51/51/24.7
+         3    307,332    -0.4%      13.0       0%    5.2%   0/5  not resolvable r0 2.00/39/31.5
+         2    319,208     3.4%      12.5      -3%    6.0%   0/5  not resolvable r0 1.88/33/76.3
+         1    282,059    -8.6%      14.2       9%    6.3%   0/5  RESOLVABLE     r0 1.00/15/98.4
+  --- follower 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    311,927     1.1%      12.8      -1%    4.1%   0/5  not resolvable r3 4.19/76/4.1
+         6    306,287    -0.8%      13.1       1%    4.6%   0/5  not resolvable r3 3.84/68/9.9
+         4    306,753    -0.6%      13.0       1%    5.4%   0/5  not resolvable r3 3.21/56/42.9
+         3    310,493     0.6%      12.9      -1%    3.4%   0/5  not resolvable r3 2.89/47/71.9
+         2    272,354   -11.7%      14.6      12%   10.8%   0/5  RESOLVABLE     r3 2.00/31/98.6
+         1    310,826     0.7%      12.9      -0%    5.1%   0/5  not resolvable r3 1.00/15/97.8
+  --- leader + follower 0 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    306,462    -0.7%      13.0       1%    6.1%   0/5  not resolvable r1 2.99/61/3.9  r0 2.91/59/3.3
+         6    302,180    -2.1%      13.2       2%    2.8%   0/5  not resolvable r1 2.81/57/7.8  r0 2.70/54/6.3
+         4    302,806    -1.9%      13.2       2%    5.9%   0/5  not resolvable r1 2.54/53/25.3  r0 2.43/49/23.5
+         3    301,983    -2.1%      13.2       2%    5.9%   0/5  not resolvable r1 2.17/41/39.8  r0 2.04/40/32.7
+         2    276,280   -10.5%      14.5      12%    2.7%   0/5  RESOLVABLE     r1 1.82/32/74.5  r0 1.79/32/71.5
+         1    181,365   -41.2%      22.1      70%    3.8%   0/5  RESOLVABLE     r1 1.00/17/97.5  r0 1.00/18/96.6
+  --- leader + follower 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    310,520     0.6%      12.9      -1%    8.1%   0/5  not resolvable r1 3.04/61/3.9  r3 4.30/75/3.2
+         6    303,218    -1.7%      13.2       2%    2.9%   0/5  not resolvable r1 2.85/57/8.3  r3 3.74/66/10.4
+         4    302,830    -1.9%      13.2       2%    4.2%   0/5  not resolvable r1 2.55/51/26.9  r3 3.17/55/40.0
+         3    300,573    -2.6%      13.3       3%    3.7%   0/5  not resolvable r1 2.19/41/41.1  r3 2.66/45/55.2
+         2    235,815   -23.6%      16.9      31%   13.6%   0/5  RESOLVABLE     r1 1.65/28/68.2  r3 2.00/31/98.5
+         1    161,958   -47.5%      24.7      90%    8.5%   0/5  RESOLVABLE     r1 0.91/15/88.8  r3 1.00/15/97.8
+  --- leader + followers 0, 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    304,299    -1.4%      13.1       1%    3.3%   0/5  not resolvable r1 2.96/60/3.5  r0 2.87/59/3.3  r3 4.14/72/3.1
+         6    311,409     0.9%      12.8      -1%    6.3%   0/5  not resolvable r1 2.89/59/8.4  r0 2.72/56/6.3  r3 4.01/77/10.9
+         4    302,401    -2.0%      13.2       2%    5.3%   0/5  not resolvable r1 2.55/51/27.5  r0 2.48/48/23.4  r3 3.31/58/42.7
+         3    300,519    -2.6%      13.3       3%    4.9%   0/5  not resolvable r1 2.14/41/38.6  r0 2.07/40/32.5  r3 2.87/48/68.3
+         2    244,564   -20.8%      16.4      26%    8.1%   0/5  RESOLVABLE     r1 1.70/30/69.2  r0 1.63/30/63.5  r3 2.00/30/97.4
+         1    157,560   -48.9%      25.4      96%    4.2%   0/5  RESOLVABLE     r1 0.92/15/89.2  r0 0.91/16/87.3  r3 1.00/14/97.8
+
+########## B3 bs1600 c8 ma1000 ##########
+  control:    441,805 tps      18.1 ms  spread 4.6%  stalled 1/5
+  --- leader pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    436,805    -1.1%      18.3       1%    3.3%   0/5  not resolvable r1 4.28/80/5.7
+         6    422,859    -4.3%      18.9       4%    1.7%   0/5  not resolvable r1 3.78/71/15.0
+         4    390,413   -11.6%      20.5      13%    1.3%   0/5  RESOLVABLE     r1 3.09/58/41.0
+         3    390,163   -11.7%      20.5      13%    8.6%   0/5  RESOLVABLE     r1 2.58/46/56.5
+         2    323,921   -26.7%      24.7      36%    5.3%   0/5  RESOLVABLE     r1 1.92/34/82.5
+         1    191,011   -56.8%      41.9     131%    6.7%   0/5  RESOLVABLE     r1 1.00/17/97.4
+  --- follower 0 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    443,508     0.4%      18.0      -0%   34.8%   0/5  not resolvable r0 4.11/82/3.1
+         6    438,833    -0.7%      18.2       1%   11.2%   0/5  not resolvable r0 3.80/72/12.7
+         4    420,452    -4.8%      19.0       5%   24.0%   1/5  not resolvable r0 3.09/60/38.0
+         3    423,728    -4.1%      18.9       4%    8.5%   0/5  not resolvable r0 2.54/48/51.0
+         2    381,769   -13.6%      20.7      14%   15.8%   0/5  not resolvable r0 2.00/32/98.6
+         1    390,000   -11.7%      20.3      12%    4.7%   0/5  RESOLVABLE     r0 1.00/15/98.4
+  --- follower 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    443,482     0.4%      18.0      -0%   25.9%   0/5  not resolvable r3 4.83/92/3.8
+         6    444,874     0.7%      18.0      -1%    5.2%   0/5  not resolvable r3 5.02/86/17.9
+         4    425,772    -3.6%      18.8       4%   21.9%   0/5  not resolvable r3 3.97/67/50.0
+         3    408,093    -7.6%      19.5       8%    7.4%   0/5  RESOLVABLE     r3 3.00/46/95.0
+         2    413,893    -6.3%      19.3       7%    5.3%   0/5  RESOLVABLE     r3 2.00/31/98.7
+         1    438,541    -0.7%      18.2       1%    6.9%   0/5  not resolvable r3 1.00/15/97.8
+  --- leader + follower 0 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    437,281    -1.0%      18.3       1%    4.1%   0/5  not resolvable r1 4.11/77/5.8  r0 4.10/80/4.2
+         6    413,170    -6.5%      19.4       7%    3.0%   0/5  RESOLVABLE     r1 3.76/71/14.7  r0 3.60/70/11.1
+         4    379,022   -14.2%      21.1      17%    9.7%   0/5  RESOLVABLE     r1 3.05/57/39.5  r0 2.89/56/34.4
+         3    377,831   -14.5%      21.2      17%    4.0%   0/5  RESOLVABLE     r1 2.49/45/54.0  r0 2.39/46/45.8
+         2    318,330   -27.9%      25.1      39%    6.7%   0/5  RESOLVABLE     r1 1.93/34/83.8  r0 1.86/34/78.3
+         1    192,412   -56.4%      41.6     130%    7.3%   0/5  RESOLVABLE     r1 1.00/17/97.5  r0 0.98/18/94.9
+  --- leader + follower 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    439,117    -0.6%      18.2       0%    7.5%   0/5  not resolvable r1 4.35/81/5.6  r3 5.57/92/6.3
+         6    415,197    -6.0%      19.3       6%    6.0%   0/5  RESOLVABLE     r1 3.75/70/14.2  r3 4.89/82/17.6
+         4    377,768   -14.5%      21.2      17%    4.0%   0/5  RESOLVABLE     r1 3.05/58/39.7  r3 3.56/67/48.7
+         3    372,628   -15.7%      21.5      19%    4.3%   0/5  RESOLVABLE     r1 2.53/45/55.6  r3 2.99/48/90.2
+         2    302,166   -31.6%      26.5      46%    2.4%   0/5  RESOLVABLE     r1 1.90/33/81.5  r3 2.00/32/98.6
+         1    199,291   -54.9%      40.1     122%    7.8%   0/5  RESOLVABLE     r1 1.00/18/97.5  r3 1.00/15/97.7
+  --- leader + followers 0, 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    441,463    -0.1%      18.1       0%    3.3%   1/5  not resolvable r1 4.25/78/5.2  r0 4.13/83/3.2  r3 5.14/92/4.5
+         6    414,031    -6.3%      19.3       7%    4.2%   0/5  RESOLVABLE     r1 3.73/70/14.4  r0 3.62/70/11.2  r3 4.76/84/17.3
+         4    372,952   -15.6%      21.4      18%    9.0%   0/5  RESOLVABLE     r1 3.01/56/38.0  r0 2.86/55/33.4  r3 3.60/64/52.2
+         3    354,796   -19.7%      22.5      25%    5.3%   0/5  RESOLVABLE     r1 2.42/44/51.0  r0 2.30/43/43.8  r3 2.98/48/90.3
+         2    283,206   -35.9%      28.2      56%    6.7%   0/5  RESOLVABLE     r1 1.84/32/76.2  r0 1.71/32/68.9  r3 2.00/31/98.5
+         1    187,641   -57.5%      42.6     135%    5.8%   0/5  RESOLVABLE     r1 1.00/17/97.5  r0 0.99/18/95.5  r3 1.00/15/97.8
+
+########## B4 bs3200 c8 ma4000 ##########
+  control:    455,631 tps      70.2 ms  spread 4.1%  stalled 2/5
+  --- leader pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    436,701    -4.2%      73.3       4%    7.8%   1/5  not resolvable r1 4.05/79/4.4
+         6    431,402    -5.3%      74.2       6%    5.8%   0/5  not resolvable r1 3.77/78/12.6
+         4    401,891   -11.8%      79.6      13%    7.4%   0/5  RESOLVABLE     r1 3.06/65/37.7
+         3    411,491    -9.7%      77.8      11%   10.1%   0/5  RESOLVABLE     r1 2.59/53/55.1
+         2    341,049   -25.1%      93.8      34%    6.0%   0/5  RESOLVABLE     r1 1.95/36/86.7
+         1    200,977   -55.9%     159.2     127%    3.5%   0/5  RESOLVABLE     r1 1.00/19/97.9
+  --- follower 0 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    459,148     0.8%      69.7      -1%    4.9%   0/5  not resolvable r0 4.02/80/3.6
+         6    460,427     1.1%      69.5      -1%    8.2%   0/5  not resolvable r0 3.81/78/10.7
+         4    432,576    -5.1%      74.0       5%    4.4%   1/5  RESOLVABLE     r0 3.08/66/38.1
+         3    421,572    -7.5%      75.9       8%    3.6%   0/5  RESOLVABLE     r0 2.56/54/50.5
+         2    400,826   -12.0%      78.2      11%   12.1%   0/5  RESOLVABLE     r0 2.00/32/99.0
+         1    399,734   -12.3%      78.1      11%    7.9%   0/5  RESOLVABLE     r0 1.00/16/98.4
+  --- follower 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    459,216     0.8%      69.3      -1%   25.9%   0/5  not resolvable r3 5.59/94/4.1
+         6    452,312    -0.7%      70.7       1%    7.0%   0/5  not resolvable r3 5.19/89/15.9
+         4    455,212    -0.1%      70.3       0%    5.4%   0/5  not resolvable r3 3.95/68/45.0
+         3    447,200    -1.9%      71.4       2%    8.0%   0/5  not resolvable r3 3.00/47/94.7
+         2    436,505    -4.2%      73.4       4%    7.9%   1/5  not resolvable r3 2.00/32/98.7
+         1    453,093    -0.6%      70.6       1%    4.6%   0/5  not resolvable r3 1.00/15/97.8
+  --- leader + follower 0 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    448,608    -1.5%      71.3       2%    4.0%   1/5  not resolvable r1 4.21/81/3.8  r0 4.06/84/3.5
+         6    428,220    -6.0%      74.7       6%    3.5%   0/5  RESOLVABLE     r1 3.72/77/11.8  r0 3.62/76/9.8
+         4    387,072   -15.0%      82.7      18%    8.8%   0/5  RESOLVABLE     r1 3.01/66/35.8  r0 2.87/63/33.8
+         3    402,765   -11.6%      79.4      13%    4.4%   0/5  RESOLVABLE     r1 2.55/53/52.8  r0 2.40/52/45.3
+         2    333,514   -26.8%      95.9      37%    4.8%   0/5  RESOLVABLE     r1 1.95/35/86.9  r0 1.85/35/75.7
+         1    193,370   -57.6%     165.5     136%    6.6%   0/5  RESOLVABLE     r1 1.00/18/98.0  r0 0.99/18/96.0
+  --- leader + follower 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    449,440    -1.4%      71.2       1%    6.7%   0/5  not resolvable r1 4.26/82/4.2  r3 5.08/92/6.7
+         6    440,875    -3.2%      72.6       3%    6.5%   0/5  not resolvable r1 3.78/78/12.2  r3 4.83/88/14.6
+         4    386,971   -15.1%      82.7      18%    7.7%   0/5  RESOLVABLE     r1 3.00/64/37.0  r3 3.61/68/50.3
+         3    399,918   -12.2%      80.0      14%    3.8%   0/5  RESOLVABLE     r1 2.59/51/55.0  r3 3.00/47/95.4
+         2    338,627   -25.7%      94.5      35%    4.9%   0/5  RESOLVABLE     r1 1.95/35/86.4  r3 2.00/32/98.6
+         1    196,954   -56.8%     162.4     131%    2.5%   0/5  RESOLVABLE     r1 1.00/18/97.9  r3 1.00/15/97.7
+  --- leader + followers 0, 3 pinned ---
+     cores        tps   vs ctl    lat ms   vs ctl  spread  stall  verdict      pinned: cores used / busiest thr % / host psi %
+         8    455,489    -0.0%      70.2       0%    4.3%   1/5  not resolvable r1 4.12/81/4.0  r0 4.14/84/3.2  r3 5.57/92/3.0
+         6    430,110    -5.6%      74.4       6%    3.6%   0/5  RESOLVABLE     r1 3.74/78/12.0  r0 3.63/77/10.9  r3 4.88/88/15.0
+         4    376,407   -17.4%      85.0      21%   10.5%   0/5  RESOLVABLE     r1 2.92/63/35.0  r0 2.76/62/31.0  r3 3.60/66/49.0
+         3    375,697   -17.5%      85.2      21%   11.9%   0/5  RESOLVABLE     r1 2.46/51/47.6  r0 2.33/50/44.7  r3 2.98/49/89.4
+         2    308,668   -32.3%     103.7      48%    7.0%   0/5  RESOLVABLE     r1 1.87/34/77.5  r0 1.76/33/70.8  r3 2.00/32/98.7
+         1    193,492   -57.5%     165.4     136%    2.2%   0/5  RESOLVABLE     r1 1.00/18/97.7  r0 0.98/18/94.6  r3 1.00/15/97.8
+
+=== 3. cells with mean latency >= 8 s (warm-up may be too short) ===
+  none

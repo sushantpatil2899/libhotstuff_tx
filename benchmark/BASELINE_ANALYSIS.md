@@ -615,7 +615,9 @@ network-latency re-run, start from.
 > **Correction (section 13).** B4's 90%-write cell above includes two
 > stalled runs. Its 5 clean runs give **458,388 tps, 69.8 ms mean, p95
 > 75.4, p99 90.3** (all-run figures: 459,790 / 69.6 / 76.2 / 93.1). B1, B2
-> and B3 had no stalled runs in any stage. Across Stages E-H, B4's
+> and B3 had no stalled runs in any stage of this document (B3 later
+> stalled in 3 of 185 Stage K runs, `COMPUTE_ANALYSIS.md` section 7).
+> Across Stages E-H, B4's
 > configuration stalled in 8 runs.
 
 ---
@@ -969,7 +971,10 @@ Stage H p-values), and with stalled runs excluded. Output:
 | H | 4, in 3 cells (including B4) |
 | P | 0 (see below) |
 
-**B1, B2 and B3 never stalled in any stage.** B4's configuration stalled
+**B1, B2 and B3 never stalled in any stage of this document.**
+*Correction: B3 later stalled in 3 of 185 Stage K runs, one of them an
+unrestricted control; B1 and B2 still have not (`COMPUTE_ANALYSIS.md`
+section 7).* B4's configuration stalled
 in 8 runs across Stages E-H.
 
 **Misclassified by this rule:** the 3 Stage P runs at block_size 800 /
@@ -1280,11 +1285,13 @@ Stage N with the leader relabelled, so that sweep is dropped too.
   enough to cover several commit cycles after it (section 14.1);
 - count stalled runs per cell, and run a no-fault control per baseline in
   the same sweep. B4 stalled in 5 of 33 runs with no fault injected;
-  B1-B3 never did (13.2, 13.6);
+  B1 and B2 never have; B3 stalled 3 times in 185 Stage K runs (13.2,
+  13.6, `COMPUTE_ANALYSIS.md` 7);
 - verify injected conditions per run, as `rtt.json` does for delay.
 
 **Planned after this document is closed, in order:**
-1. reduced computational capacity on one node;
+1. reduced computational capacity on one node -- done, fewer cores only:
+   `COMPUTE_ANALYSIS.md`;
 2. failure injection: the leader failing mid-run, then a follower.
 
 ---
