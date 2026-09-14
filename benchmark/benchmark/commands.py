@@ -276,6 +276,7 @@ class CommandMaker:
             # pattern from matching this very shell's command line, which
             # contains the literal text of the pattern.
             "sudo -n pkill -f '[c]ompute_sampler.py' 2>/dev/null; "
+            "pkill -f '[f]ail_inject.sh' 2>/dev/null; "
             'true'
         )
 

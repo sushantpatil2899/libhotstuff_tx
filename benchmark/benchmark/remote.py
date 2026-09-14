@@ -632,6 +632,19 @@ class CloudLabBench:
                 ssh_host, cmd, PathMaker.client_log_file(c_idx),
             )
 
+        # Failure injection is timed from here, the moment every client has
+        # been launched, and runs on the target host itself so its timing
+        # does not depend on this loop's 2 s polling.
+        if bench.fail_node >= 0:
+            host, _ = replica_pairs[bench.fail_node]
+            local = os.path.join(os.path.dirname(__file__), self.INJECTOR)
+            self._conn(host).put(local, remote=self.INJECTOR)
+            self._background_run(
+                host,
+                f'bash {self.INJECTOR} {bench.fail_at} {bench.fail_type}',
+                PathMaker.failure_file(bench.fail_node),
+            )
+
         # 3) Wait for clients to exit naturally (finite ``iter_count``)
         # OR ``duration`` cap, whichever comes first. ``duration`` is
         # now a safety cap rather than a fixed sleep — so finite-iter
@@ -665,6 +678,7 @@ class CloudLabBench:
         self.kill(hosts=all_hosts, delete_logs=False)
 
     SAMPLER = 'compute_sampler.py'
+    INJECTOR = 'fail_inject.sh'
 
     def _client_hosts(self, client_pairs):
         return sorted({h for h, _ in client_pairs})
@@ -723,6 +737,14 @@ class CloudLabBench:
                 c.get(PathMaker.client_log_file(c_idx), local=local)
             except (OSError, FileNotFoundError) as e:
                 Print.warn(f'client {c_idx} log fetch failed: {e}')
+
+        if getattr(bench, 'fail_node', -1) >= 0:
+            host, _ = replica_pairs[bench.fail_node]
+            path = PathMaker.failure_file(bench.fail_node)
+            try:
+                self._conn(host).get(path, local=path)
+            except (OSError, FileNotFoundError) as e:
+                Print.warn(f'failure record fetch failed {path}: {e}')
 
         if getattr(bench, 'sample_compute', False):
             files = [(h, PathMaker.compute_file('replica', i))
@@ -1004,6 +1026,9 @@ class CloudLabBench:
             'meas_warmup': row.get('meas_warmup', 0),
             'meas_cooldown': row.get('meas_cooldown', 0),
             'sample_compute': row.get('sample_compute', False),
+            'fail_node': row.get('fail_node', -1),
+            'fail_type': row.get('fail_type', ''),
+            'fail_at': row.get('fail_at', 0),
             **{k: v for k, v in row.items() if k.startswith('cpu_node')},
             'collocate_client': str(
                 row.get('collocate_client', 'true')

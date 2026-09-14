@@ -113,6 +113,11 @@ class PathMaker:
         return join(PathMaker.logs_path(), f'client-{c}.log')
 
     @staticmethod
+    def failure_file(i):
+        """Evidence written by fail_inject.sh on replica i's host."""
+        return join(PathMaker.logs_path(), f'failure-replica-{i}.json')
+
+    @staticmethod
     def compute_file(role, i):
         """Per-host compute samples: role 'replica' (i = replica index) or
         'clienthost' (i = position among the client hosts)."""

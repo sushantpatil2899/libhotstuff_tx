@@ -91,6 +91,12 @@ class BenchParameters:
             # unrestricted. See CommandMaker.run_replica.
             self.cpu_cores = {i: int(raw.get(f'cpu_node{i}', 0) or 0)
                               for i in range(self.nodes)}
+            # Failure injection (fail_inject.sh): replica index, or -1 for
+            # none; crash or freeze; seconds after the clients start.
+            fn = raw.get('fail_node', -1)
+            self.fail_node = int(fn) if str(fn).strip() not in ('', 'None') else -1
+            self.fail_type = str(raw.get('fail_type', '') or '').strip()
+            self.fail_at = float(raw.get('fail_at', 0) or 0)
         except (TypeError, ValueError) as e:
             raise ConfigError(f'bench param type error: {e}')
 
@@ -101,6 +107,12 @@ class BenchParameters:
         _require(self.runs >= 1, 'runs must be >= 1')
         _require(all(0 <= n <= 31 for n in self.cpu_cores.values()),
                  'cpu_node<i> must be 0 (unrestricted) or 1-31 cores')
+        if self.fail_node >= 0:
+            _require(self.fail_node < self.nodes, 'fail_node out of range')
+            _require(self.fail_type in ('crash', 'freeze'),
+                     'fail_type must be crash or freeze')
+            _require(0 < self.fail_at < self.duration,
+                     'fail_at must be inside the run (0 < fail_at < duration)')
         _require(0 <= self.meas_warmup and 0 <= self.meas_cooldown
                  and self.meas_warmup + self.meas_cooldown < self.duration,
                  'meas_warmup + meas_cooldown must be >= 0 and < duration')

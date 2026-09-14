@@ -285,6 +285,10 @@ int main(int argc, char **argv) {
         double span = hi > lo ? hi - lo : 0;
         size_t nbuckets = run > 0 ? (size_t)run + 1 : 1;
         std::vector<size_t> buckets(nbuckets, 0);
+        /* Latency summed per second of commit time, so the mean latency of
+           any second (sum / count) can be read, e.g. around an injected
+           failure. */
+        std::vector<double> latsums(nbuckets, 0.0);
         std::vector<double> wl;
         double wsum = 0, first_commit = -1, last_commit = -1;
         for (const auto &e: elapsed)
@@ -292,7 +296,11 @@ int main(int argc, char **argv) {
             double off = tsec(e.first) - t0;
             if (first_commit < 0) first_commit = off;
             last_commit = off;
-            if (off >= 0 && (size_t)off < nbuckets) buckets[(size_t)off]++;
+            if (off >= 0 && (size_t)off < nbuckets)
+            {
+                buckets[(size_t)off]++;
+                latsums[(size_t)off] += e.second;
+            }
             if (off >= lo && off <= hi)
             {
                 wl.push_back(e.second);
@@ -325,6 +333,14 @@ int main(int argc, char **argv) {
             counts += std::to_string(buckets[i]);
         }
         fprintf(stderr, "[hotstuff buckets] counts=%s\n", counts.c_str());
+        std::string sums;
+        char num[32];
+        for (size_t i = 0; i < nbuckets; i++)
+        {
+            snprintf(num, sizeof num, "%s%.3f", i ? "," : "", latsums[i]);
+            sums += num;
+        }
+        fprintf(stderr, "[hotstuff latsums] seconds=%s\n", sums.c_str());
         fflush(stderr);
     }
     for (const auto &e: elapsed)

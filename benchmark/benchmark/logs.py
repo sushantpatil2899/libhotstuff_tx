@@ -71,6 +71,7 @@ _RE_STEADY = re.compile(
     r'first_commit=(-?[0-9.]+) last_commit=(-?[0-9.]+)'
 )
 _RE_BUCKETS = re.compile(r'\[hotstuff buckets\] counts=([0-9,]+)')
+_RE_LATSUMS = re.compile(r'\[hotstuff latsums\] seconds=([0-9.,]+)')
 
 # A run is flagged stalled when the clients together committed nothing for
 # at least this many consecutive whole seconds inside the measurement
@@ -132,6 +133,7 @@ class LogParser:
         summary = None
         steady = None
         buckets = None
+        latsums = None
         with open(path, 'r', errors='replace') as f:
             for line in f:
                 if steady is None:
@@ -148,6 +150,11 @@ class LogParser:
                     mb = _RE_BUCKETS.search(line)
                     if mb:
                         buckets = [int(x) for x in mb.group(1).split(',')]
+                        continue
+                if latsums is None:
+                    ml = _RE_LATSUMS.search(line)
+                    if ml:
+                        latsums = [float(x) for x in ml.group(1).split(',')]
                         continue
                 if summary is None:
                     ms = _RE_SUMMARY.search(line)
@@ -176,6 +183,7 @@ class LogParser:
         latencies.sort()
         if steady is not None:
             steady['buckets'] = buckets or []
+            steady['latsums'] = latsums or []
         return timestamps, latencies, summary, steady
 
     @staticmethod
