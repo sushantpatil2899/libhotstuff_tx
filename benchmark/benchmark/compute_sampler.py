@@ -68,6 +68,10 @@ def _proc(pid):
             out['rss_kb'] = int(v.split()[0])
         elif k == 'Cpus_allowed_list':
             out['cpus'] = v.strip()
+    cmd = _read(f'/proc/{pid}/cmdline')
+    # The command line as launched, so per-run settings passed as flags
+    # (for example --imp-timeout) can be verified from the samples.
+    out['cmdline'] = cmd.replace('\0', ' ').strip() if cmd else None
     try:
         tids = os.listdir(f'/proc/{pid}/task')
     except OSError:

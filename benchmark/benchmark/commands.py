@@ -180,7 +180,7 @@ class CommandMaker:
 
     @staticmethod
     def run_replica(repo_dir, conf_file, *, max_rep_msg=None,
-                    max_cli_msg=None, cpu_cores=0):
+                    max_cli_msg=None, cpu_cores=0, imp_timeout=0):
         """Launch a single ``hotstuff-app`` replica from $HOME.
 
         Configs are scp'd into the remote ``$HOME`` (Fabric default), so
@@ -198,6 +198,8 @@ class CommandMaker:
             extra += f' --max-rep-msg {int(max_rep_msg)}'
         if max_cli_msg is not None:
             extra += f' --max-cli-msg {int(max_cli_msg)}'
+        if imp_timeout:
+            extra += f' --imp-timeout {float(imp_timeout)}'
         # Not using _q() here: this whole command is already wrapped in
         # bash -lc '...' (single quotes), and shlex.quote()'s own
         # single-quote escaping would break that outer nesting. Remote

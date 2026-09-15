@@ -26,14 +26,20 @@ leader at start, every rotation, their times relative to T, and the last
 leader each surviving replica settled on.
 """
 import glob
+import gzip
 import json
+import sys
 import os
 import re
 import statistics as st
 from collections import defaultdict
 from datetime import datetime
 
-PAT = re.compile(r'L_(B\d)_(ctl|lead_crash|lead_freeze|f3_crash|f3_freeze)_r(\d+)$')
+# Run-id prefix: L (Stage L, default 11 s impeachment timeout) or LT<t>
+# (the same sweep with --imp-timeout <t>), e.g. `analyse_stage_l.py LT2`.
+PREFIX = sys.argv[1] if len(sys.argv) > 1 else 'L'
+EXPECT_TIMEOUT = float(PREFIX[2:]) if PREFIX.startswith('LT') else None
+PAT = re.compile(PREFIX + r'_(B\d)_(ctl|lead_crash|lead_freeze|f3_crash|f3_freeze)_r(\d+)$')
 ARMS = ('ctl', 'lead_crash', 'lead_freeze', 'f3_crash', 'f3_freeze')
 LABEL = {'ctl': 'no failure', 'lead_crash': 'leader crash',
          'lead_freeze': 'leader freeze', 'f3_crash': 'follower 3 crash',
@@ -82,13 +88,42 @@ def window(series, lo, hi):
     return c / max(1, len(secs)), (l / c * 1000 if c else None)
 
 
+def open_replica_log(run_dir, i):
+    """replica-<i>.log, or its gzipped form after parser --gzip-replica-logs."""
+    f = os.path.join(run_dir, f'replica-{i}.log')
+    if os.path.exists(f):
+        return open(f, errors='replace')
+    if os.path.exists(f + '.gz'):
+        return gzip.open(f + '.gz', 'rt', errors='replace')
+    return None
+
+
+def timeout_flags(run_dir):
+    """--imp-timeout value on each replica's command line (None = absent)."""
+    out = {}
+    for i in range(4):
+        f = os.path.join(run_dir, f'compute-replica-{i}.jsonl')
+        if not os.path.exists(f):
+            continue
+        for line in open(f):
+            if '"cmdline"' not in line:
+                continue
+            procs = json.loads(line).get('procs', {})
+            for p in procs.values():
+                m = re.search(r'--imp-timeout (\S+)', p.get('cmdline') or '')
+                out[i] = float(m[1]) if m else None
+            if i in out:
+                break
+    return out
+
+
 def pacemaker_events(run_dir, t_inject):
     ev = []
     for i in range(4):
-        f = os.path.join(run_dir, f'replica-{i}.log')
-        if not os.path.exists(f):
+        fh = open_replica_log(run_dir, i)
+        if fh is None:
             continue
-        for line in open(f, errors='replace'):
+        for line in fh:
             m = RE_PM.search(line)
             if m:
                 ts = datetime.strptime(m[1], '%Y-%m-%d %H:%M:%S.%f').timestamp()
@@ -100,12 +135,21 @@ runs = defaultdict(list)
 verify = defaultdict(lambda: [0, 0])
 launch_offsets = []
 raw = []
-for d in sorted(glob.glob('results/run_logs/L_*')):
+timeout_ok = timeout_bad = timeout_unrecorded = 0
+for d in sorted(glob.glob(f'results/run_logs/{PREFIX}_*')):
     m = PAT.match(os.path.basename(d))
     if not m or not os.path.exists(os.path.join(d, 'metrics.json')):
         continue
     b, arm, rep = m[1], m[2], int(m[3])
     series, t0, nclients = client_series(d)
+    flags = timeout_flags(d)
+    if not flags:
+        # Runs sampled before the sampler recorded command lines (Stage L).
+        timeout_unrecorded += 1
+    elif len(flags) == 4 and all(v == EXPECT_TIMEOUT for v in flags.values()):
+        timeout_ok += 1
+    else:
+        timeout_bad += 1
     rec = None
     if arm != 'ctl':
         fp = os.path.join(d, f'failure-replica-{TARGET[arm]}.json')
@@ -146,7 +190,11 @@ for b, arm, rep, d, series, t0, nclients, rec, met in raw:
         stalled_early=before_tps == 0, nclients=nclients,
         state=rec.get('state_after_1s') if rec else None))
 
-print(f'Stage L: {sum(len(v) for v in runs.values())} runs')
+print(f'{PREFIX}: {sum(len(v) for v in runs.values())} runs, impeachment '
+      f'timeout {EXPECT_TIMEOUT if EXPECT_TIMEOUT else "default (11 s)"}')
+print(f'timeout on all 4 replicas\' command lines as expected: {timeout_ok} runs, '
+      f'not as expected: {timeout_bad}, command line not recorded: '
+      f'{timeout_unrecorded}')
 print(f'launch offset of injection after first client start + 40 s: '
       f'median {offset:.2f} s')
 print('\n=== 1. injection verification ===')
@@ -214,3 +262,22 @@ for b in ('B1', 'B2', 'B3', 'B4'):
                 seq = [series[s][0] for s in range(T - 3, T + 30)]
                 print(f'  {b} {LABEL[arm]:<18} T-3..T+29: '
                       + ' '.join(f'{c // 1000}k' if c >= 1000 else str(c) for c in seq))
+
+print('\n=== 5. every run: before tps, after/before, longest zero-commit '
+      'stretch, recovery, rotations, settled leader ===')
+for b in ('B1', 'B2', 'B3', 'B4'):
+    for arm in ARMS:
+        for x in sorted(runs.get((b, arm), []), key=lambda x: x['rep']):
+            ev = x['events']
+            rot = [e for e in ev if e[2] == 'rotate to']
+            pre = sum(1 for e in rot if e[0] < 0)
+            settled = sorted({lid for t, r, k, lid in ev
+                              if k == 'stop rotation at' and r != TARGET.get(arm)
+                              and t == max(tt for tt, rr, kk, ll in ev
+                                           if rr == r and kk == 'stop rotation at')})
+            ratio = x['after'] / x['before'] * 100 if x['before'] else 0
+            rec = '-' if x['recover'] is None else f'{x["recover"]}s'
+            print(f'  {b} {LABEL[arm]:<18} r{x["rep"]}  before {x["before"]:>9,.0f}  '
+                  f'after/before {ratio:>6.1f}%  zero {x["zero"]:>2}s  '
+                  f'recover90 {rec:>4}  rotations {len(rot):>2} '
+                  f'(before T {pre})  settled {settled}')

@@ -133,6 +133,19 @@ def _prune_client_logs(run_dir):
     return freed
 
 
+def _gzip_replica_logs(run_dir):
+    """Replace each replica-*.log with replica-*.log.gz. Never raises."""
+    import gzip
+    import shutil
+    for path in glob(os.path.join(run_dir, 'replica-*.log')):
+        try:
+            with open(path, 'rb') as src, gzip.open(path + '.gz', 'wb') as dst:
+                shutil.copyfileobj(src, dst)
+            os.remove(path)
+        except OSError as e:
+            print(f'[parser-daemon] (warn) gzip failed for {path}: {e}')
+
+
 def _process_dir(run_dir, prune=True):
     """Parse one READY run dir. Returns 'ok', 'error', or 'skip'."""
     ready_path = os.path.join(run_dir, READY_MARKER)
@@ -224,6 +237,9 @@ def main(argv=None):
                              'prefix of the run and metrics.json already '
                              'holds everything the parser derives from '
                              'them. ~21MB per client per run otherwise.')
+    parser.add_argument('--gzip-replica-logs', action='store_true',
+                        help='gzip replica-*.log after a successful parse. '
+                             'Protocol-logged runs write ~90 MB+ per run.')
     parser.add_argument('--once', action='store_true',
                         help='Single pass and exit (for testing)')
     args = parser.parse_args(argv)
@@ -249,6 +265,8 @@ def main(argv=None):
                 if not os.path.isdir(run_dir):
                     continue
                 outcome = _process_dir(run_dir, prune=not args.no_prune)
+                if outcome == 'ok' and args.gzip_replica_logs:
+                    _gzip_replica_logs(run_dir)
                 if outcome in ('ok', 'error'):
                     parsed_any = True
 

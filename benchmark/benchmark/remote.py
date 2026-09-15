@@ -602,6 +602,7 @@ class CloudLabBench:
                 max_rep_msg=protocol.max_rep_msg,
                 max_cli_msg=protocol.max_cli_msg,
                 cpu_cores=bench.cpu_cores.get(i, 0),
+                imp_timeout=bench.imp_timeout,
             )
             self._background_run(
                 ssh_host, cmd, PathMaker.replica_log_file(i),
@@ -1029,6 +1030,7 @@ class CloudLabBench:
             'fail_node': row.get('fail_node', -1),
             'fail_type': row.get('fail_type', ''),
             'fail_at': row.get('fail_at', 0),
+            'imp_timeout': row.get('imp_timeout', 0),
             **{k: v for k, v in row.items() if k.startswith('cpu_node')},
             'collocate_client': str(
                 row.get('collocate_client', 'true')

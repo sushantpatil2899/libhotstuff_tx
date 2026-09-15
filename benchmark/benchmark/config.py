@@ -97,6 +97,9 @@ class BenchParameters:
             self.fail_node = int(fn) if str(fn).strip() not in ('', 'None') else -1
             self.fail_type = str(raw.get('fail_type', '') or '').strip()
             self.fail_at = float(raw.get('fail_at', 0) or 0)
+            # rr impeachment timeout (hotstuff-app --imp-timeout), seconds;
+            # 0 leaves the binary's default of 11 s.
+            self.imp_timeout = float(raw.get('imp_timeout', 0) or 0)
         except (TypeError, ValueError) as e:
             raise ConfigError(f'bench param type error: {e}')
 
@@ -107,6 +110,7 @@ class BenchParameters:
         _require(self.runs >= 1, 'runs must be >= 1')
         _require(all(0 <= n <= 31 for n in self.cpu_cores.values()),
                  'cpu_node<i> must be 0 (unrestricted) or 1-31 cores')
+        _require(self.imp_timeout >= 0, 'imp_timeout must be >= 0')
         if self.fail_node >= 0:
             _require(self.fail_node < self.nodes, 'fail_node out of range')
             _require(self.fail_type in ('crash', 'freeze'),
