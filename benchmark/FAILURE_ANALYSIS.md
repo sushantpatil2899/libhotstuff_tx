@@ -14,8 +14,8 @@ Phase 3 of the study. Measurement conventions and baselines are those of
 Reservation: CloudLab Utah Exp-3, `d6515` nodes (AMD EPYC 7452, 32 physical
 cores / 64 hardware threads, 125 GB), 4 replicas + 1 client host.
 
-Totals: **400 runs** in two sweeps (Stage L 100, Stage LT 300), 0 run
-errors, 0 parse failures.
+Totals: **454 runs** in three sweeps (Stage L 100, Stage LT 300, Stage M
+54), 0 run errors, 0 parse failures.
 
 **Only findings are recorded. No mechanism is proposed for any of them.**
 
@@ -513,11 +513,12 @@ Two facts bear on this:
   `src/hotstuff.cpp` answers an already-pending hash with `decision=0` --
   but nothing ever uses it.)
 
-**Consequence for the leader-failure figures in sections 5 and 6:** where
-a block is lost, part of the throughput drop is the clients circulating
-less work, not the system serving it more slowly. How much of the drop
-that accounts for is **not established**; separating the two needs a
-no-failure control run at the reduced load.
+**Consequence for the leader-failure figures in sections 5 and 6:** none,
+as it turned out. Stage M ran healthy four-replica controls at exactly
+this reduced load and they lost no throughput at all (section 15.1), so
+the drop after a leader failure is the system, not the offered load. What
+remains is that one block of client transactions is never committed and
+never retried.
 
 **Not established:** why B1 and B4 lose a block while B2 and B3 never do,
 and why at B1 it happens on a freeze but not on a crash.
@@ -573,14 +574,117 @@ Supporting measurements:
 
 ---
 
-## 15. Open questions
+## 15. Stage M -- what the lost block costs, and where B2's delay lives
+
+54 runs, 18 configurations x 3 reps, 120 s each, protocol logging on, 0
+errors. Four arms, never combined in one run. In the `map` arm follower 3
+is killed at t = 40 s, so one run measures the same configuration with
+four replicas (before) and three (after).
+
+### 15.1 The lost block does not explain the leader-failure drop
+
+A healthy four-replica system, no failure, run at exactly the load a
+leader failure leaves behind:
+
+| | requests in flight | throughput | latency |
+|---|---|---|---|
+| B4 normal (control, section 5) | 32,000 | 434,083 | 73.7 ms |
+| **B4 healthy at the reduced load** | **28,799** | **439,438** | **65.5 ms** |
+| B4 after a leader crash | 28,798 | 379,206 | 76.0 ms |
+| B1 normal (control, section 5) | 2,000 | 162,694 | 12.3 ms |
+| **B1 healthy at the reduced load** | **1,799** | **162,870** | **11.1 ms** |
+| B1 after a leader freeze | 1,799 | 144,978 | 12.6 ms |
+
+Taking 10% of the load away costs a healthy system nothing: B4 gives
+439,438 against 434,083, B1 gives 162,870 against 162,694, both within
+run-to-run spread, and latency falls as the queue shortens.
+
+**So the throughput after a leader failure is not low because the clients
+offer less work.** At the same 28,798 in flight, a healthy leader serves
+439,438 and a replaced one serves 379,206 -- 60,000 tx/s apart. The
+figures in sections 5 and 6 stand as measured: after a leader failure the
+system itself is slower.
+
+The lost block of section 13 remains real and unexplained, but it is a
+correctness question -- one block of client transactions is never
+committed and never retried -- not a measurement artefact.
+
+### 15.2 What B2's delay is not
+
+B2, four replicas, no failure, against its usual `repnworker` 4 and
+`repburst` 1,000 (which measure 0.36 ms here):
+
+| | throughput | quorum-to-QC |
+|---|---|---|
+| `repnworker` 1 | 299,592 | 0.36 ms |
+| `repnworker` 2 | 313,752 | 0.35 ms |
+| `repnworker` 8 | 303,634 | 0.39 ms |
+| `repburst` 100 | 295,110 | 0.50 ms |
+| `repburst` 10,000 | 311,695 | 0.32 ms |
+
+Eight times the worker threads, and a hundredfold change in burst size,
+leave it where it was. **Blocks were full in every cell of the sweep** --
+median and minimum both equal to the configured block size, in 100% of
+blocks -- so it is not the leader waiting for enough commands to fill a
+block.
+
+### 15.3 Where it appears
+
+The delay is not a constant overhead; it is a wait on a share of blocks,
+and that share tracks the configuration. Four replicas, before any
+failure:
+
+| configuration | clients | in flight | in flight / block | blocks delayed over 0.1 ms | median |
+|---|---|---|---|---|---|
+| bs400 c2 | 2 | 2,000 | 5 | **85.1%** | 0.84 ms |
+| **bs800 c4 (B2)** | 4 | 4,000 | 5 | **74.0%** | 0.36 ms |
+| bs1600 c8 (B3) | 8 | 8,000 | 5 | 34.7% | 0.03 ms |
+| bs800 c4 ma2000 | 4 | 8,000 | 10 | 24.0% | 0.02 ms |
+| bs800 c8 | 8 | 8,000 | 10 | 0.0% | 0.02 ms |
+| bs200 c2 (B1), bs3200 c8 (B4) | | | 10 | ~0% | 0.02-0.03 ms |
+
+More clients, or more outstanding work per block, reduces it. Removing a
+replica reduces it too: 0.36 -> 0.02 ms at B2, 0.92 -> 0.42 ms at bs400
+c2.
+
+### 15.4 The configurations that gain from losing a replica
+
+Throughput in the same run, four replicas then three:
+
+| configuration | 4 replicas | 3 replicas | change |
+|---|---|---|---|
+| bs400 c2 | 158,392 | 207,521 | **+31.0%** |
+| bs800 c4 (B2) | 314,600 | 348,600 | **+10.8%** |
+| bs800 c4 ma2000 | 330,804 | 358,018 | +8.2% |
+| bs800 c4 ma4000 | 328,517 | 347,158 | +5.7% |
+| bs200 c2 (B1) | 166,724 | 169,366 | +1.6% |
+| bs1600 c8 (B3) | 422,601 | 425,133 | +0.6% |
+| bs400 c4 | 269,051 | 267,026 | -0.8% |
+| bs400 c8 | 260,829 | 255,439 | -2.1% |
+| bs800 c8 | 363,875 | 347,418 | -4.5% |
+| bs1600 c8 ma2000 | 417,523 | 397,994 | -4.7% |
+| bs3200 c8 ma4000 (B4) | 439,791 | 418,276 | -4.9% |
+
+Every configuration that gains has 2 or 4 clients; every one that loses
+has 8. The two largest gains, bs400 c2 and B2, are the two cells carrying
+the largest quorum-to-QC delay. B2 is not unique after all -- it is the
+second-worst case of a pattern, and bs400 c2 is a stronger one.
+
+**No cause is established** for the delay, for its dependence on client
+count, or for why removing a replica reduces it.
+
+---
+
+## 16. Open questions
 
 Recorded, with no mechanism proposed for any of them:
 
-- **What B2's 0.45 ms is** (section 14): the delay between the quorum
-  vote arriving and the QC being formed, present only at B2 and only with
-  four replicas. This is the narrowed form of "why B2 is faster after a
-  failure", which holds in 20 of 20 B2 failure cells.
+- **What the quorum-to-QC delay is** (sections 14 and 15): a wait on a
+  share of blocks, worst with few clients, unaffected by worker threads
+  or burst size, and reduced by removing a replica. B2 is the
+  second-worst case measured; bs400 c2 is worse.
+- **Why the number of clients governs it**, when blocks are full in every
+  configuration and no thread is saturated.
 - **Why one block is lost at B1 and B4 but not B2 and B3** (section 13),
   and how much of the leader-failure throughput drop that accounts for.
 - **Why 17 leader-failure runs never recovered**, and why they cluster at
@@ -593,7 +697,7 @@ Recorded, with no mechanism proposed for any of them:
 
 ---
 
-## 16. Data
+## 17. Data
 
 | file | what |
 |---|---|
@@ -604,6 +708,8 @@ Recorded, with no mechanism proposed for any of them:
 | `analyse_stage_l.py` | the analysis; takes a run-id prefix (`L`, `LT5`, `LT2`, `LT1`) |
 | `make_stage_l_csv.py`, `make_stage_lt_csv.py` | the sweep definitions |
 | `benchmark/fail_inject.sh` | the injector |
+| `results/stage_m_results.csv` | Stage M, 54 runs |
+| `analyse_stage_m.py`, `make_stage_m_csv.py` | the Stage M analysis and sweep |
 | `analyse_stage_l.py` sections 2-5 | the per-run figures behind sections 5-10 |
 
 Per-run evidence kept on the runs' host under `results/run_logs/<run id>/`:
