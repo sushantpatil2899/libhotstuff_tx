@@ -407,24 +407,193 @@ run-to-run spread at every level.
 
 ---
 
-## 12. Open questions
+## 12. How to read these throughput numbers
+
+Added after the Stage LT results, from an audit of the measurement
+itself. The audit found no error in the arithmetic, and two things that
+change what the numbers mean.
+
+### 12.1 The measurement is sound
+
+| check | result |
+|---|---|
+| clients reporting in every run | 2/2, 4/4, 8/8; `clients_committing` matches |
+| per-second histograms cover the whole after window | every run reaches T+83 or later; the window needs T+76 |
+| client start stagger (buckets are placed by whole second) | median 0.23 s, maximum 0.35 s |
+| window mean vs the run's own `tps_steady` | controls agree within 1% (B1 -0.1%, B2 +0.0%, B3 +0.5%, B4 -1.2%) |
+| commit counting | a command is counted once, on the f+1'th `decision=1` reply, then erased; `decision=0` receipts are excluded |
+
+The 15-23% gap between the after-window mean and `tps_steady` in
+leader-failure runs is the outage, which `tps_steady` includes and the
+after window excludes.
+
+### 12.2 The load is fixed, so throughput and latency are one measurement
+
+Each client keeps at most `max_async` requests outstanding and sends a new
+one only when an old one returns. The offered load is therefore capped at
+`clients x max_async`, and
+
+    requests in flight = throughput x latency
+
+holds in the data: in the no-failure controls the product is 1,999 /
+3,999 / 7,998 / 31,999 against caps of 2,000 / 4,000 / 8,000 / 32,000.
+Across all 80 cells of Stages L and LT it holds within 0.4% except where
+section 13 applies.
+
+So a throughput change at a fixed cap is a latency change restated. This
+does **not** mean capacity was never measured: the `max_async` and
+`block_size` sweeps of `BASELINE_ANALYSIS.md` section 4 raised the cap
+directly, and throughput stopped rising -- the definition of saturation.
+At B2's configuration (block 800, 4 clients):
+
+| requests in flight | throughput |
+|---|---|
+| 4,000 | 308,783 |
+| 16,000 | 328,967 |
+| 64,000 | 334,422 |
+| 256,000 | 329,547 |
+
+64x the load bought 8%, then nothing. At B3's configuration it reverses:
+447,053 at `max_async` 1,000 against 308,526 at 64,000.
+
+Each baseline sits near the ceiling of its own configuration:
+
+| | baseline here | best that configuration reached at any load | gap |
+|---|---|---|---|
+| B1 | 162,694 | 172,981 | 6% below |
+| B2 | 300,438 | 334,422 | 10% below |
+| B3 | 430,719 | 447,053 | 4% below |
+| B4 | 434,083 | 459,342 | 5% below |
+
+**B2 after a replica fails reaches 356,982 -- above the 334,422 that four
+replicas reached at any load ever tested.** Its gain is therefore not the
+system being given more work.
+
+---
+
+## 13. One block of work is lost when the leader fails
+
+Requests in flight, measured per run as (commits in the after window) x
+(their mean latency), then the cell median:
+
+| | in flight after | cap | missing | as blocks |
+|---|---|---|---|---|
+| B1 leader freeze | 1,799 | 2,000 | 201 | **1.00** |
+| B2 leader crash / freeze | 3,998 | 4,000 | 2 | 0.00 |
+| B3 leader crash / freeze | 7,998 | 8,000 | 2 | 0.00 |
+| B4 leader crash | 28,798 | 32,000 | 3,202 | **1.00** |
+
+The shortfall is **exactly one block** wherever it occurs -- 200 at B1,
+3,200 at B4 -- never a partial amount and never two. It holds at all four
+timeouts:
+
+| | 11 s | 5 s | 2 s | 1 s |
+|---|---|---|---|---|
+| B1 leader crash | 0 | 0 | 0 | 0 |
+| B1 leader freeze | 1 block | 1 block | 1 block | 0 |
+| B2, B3 (both arms) | 0 | 0 | 0 | 0 |
+| B4 leader crash | 1 block | 1 block | 1 block | 1 block |
+| B4 leader freeze | 0.5 | 1 block | 0 | 1 block |
+
+It appears at the failure and stays flat for the rest of the run: at B4,
+in flight reads 31,977 at T-20, 0 through the outage, then 28,807 at
+T+10 and 28,793 at T+70.
+
+**No follower-failure run and no control run, at any baseline or timeout,
+lost anything** -- 160 follower-failure runs, all at the full cap.
+
+Two facts bear on this:
+
+- only the leader proposes blocks, so only a leader failure can destroy
+  work that is in progress and held nowhere else;
+- **the client never re-sends.** `examples/hotstuff_client.cpp` has no
+  timer, no retry and no resend path: a command that does not collect
+  f+1 `decision=1` replies stays in `waiting` for the rest of the run and
+  its slot is never reused. (The replicas do support re-submission --
+  `src/hotstuff.cpp` answers an already-pending hash with `decision=0` --
+  but nothing ever uses it.)
+
+**Consequence for the leader-failure figures in sections 5 and 6:** where
+a block is lost, part of the throughput drop is the clients circulating
+less work, not the system serving it more slowly. How much of the drop
+that accounts for is **not established**; separating the two needs a
+no-failure control run at the reduced load.
+
+**Not established:** why B1 and B4 lose a block while B2 and B3 never do,
+and why at B1 it happens on a freeze but not on a crash.
+
+---
+
+## 14. Where B2's extra time goes
+
+B2 is the baseline that runs faster after a failure (finding 6). The gain
+is a faster block pipeline, with blocks always full at 800 commands:
+
+| B2 | blocks committed per second | time per block |
+|---|---|---|
+| before the failure | 372 | 2.59 ms |
+| after follower 3 dies | 446 | 2.19 ms |
+
+446 x 800 = 356,960, matching the 356,982 measured.
+
+Splitting the leader's block cycle into three measured segments, from its
+own log, puts the whole gain in one of them:
+
+| baseline | window | quorum wait | QC formed | next block | gap |
+|---|---|---|---|---|---|
+| B1 | before -> after | 0.98 -> 1.00 | 0.02 -> 0.02 | 0.16 -> 0.16 | 1.17 -> 1.18 |
+| **B2** | before -> after | 1.58 -> 1.60 | **0.49 -> 0.02** | 0.53 -> 0.56 | **2.58 -> 2.19** |
+| B3 | before -> after | 2.40 -> 2.49 | 0.03 -> 0.02 | 1.16 -> 1.20 | 3.66 -> 3.74 |
+| B4 | before -> after | 4.53 -> 4.64 | 0.03 -> 0.03 | 2.76 -> 2.87 | 7.15 -> 7.60 |
+
+All times in ms, medians over blocks then over runs. "Quorum wait" is
+propose to the 2f+1'th vote for that block; "QC formed" is that vote to
+the leader's "got QC" line; "next block" is that line to the next
+propose.
+
+B1, B3 and B4 spend 0.02-0.03 ms on the middle segment in every window.
+**B2 spends 0.49 ms there with four replicas and 0.02 ms with three.**
+The quorum wait barely moves, so the gain is not about waiting for votes.
+
+Supporting measurements:
+
+1. **Replica 3's vote always arrives last**, at every baseline: 1.43 vs
+   0.97 ms (B1), 1.89 vs 1.53 (B2), 4.24 vs 2.34 (B3), 8.05 vs 4.27
+   (B4), measured from the leader's propose. It is never part of the
+   quorum, which is why removing it leaves the quorum wait unchanged.
+2. **Nothing is CPU-saturated.** The leader's busiest thread runs at 67%
+   of one core before and 75% after; replicas use 3-5 of 64 cores.
+3. **The same per-block time appears in an earlier phase.** B2's
+   configuration measured 308,783 tps in the Stage D3 grid, which is 2.59
+   ms per block -- the same as the 2.52-2.59 ms measured here. Protocol
+   logging was compiled out in every earlier stage, so the segment split
+   cannot be checked there; the total can, and it matches.
+
+**No cause is established** for the 0.45 ms.
+
+---
+
+## 15. Open questions
 
 Recorded, with no mechanism proposed for any of them:
 
-- **Why B2 is faster after a failure.** It holds for leader and follower
-  failure, crash and freeze, and all four timeouts -- 20 of 20 B2 failure
-  cells. Data to look at: per-replica CPU from `compute-*.jsonl`,
-  per-second commits and latency, and the replica logs of the B2 runs.
+- **What B2's 0.45 ms is** (section 14): the delay between the quorum
+  vote arriving and the QC being formed, present only at B2 and only with
+  four replicas. This is the narrowed form of "why B2 is faster after a
+  failure", which holds in 20 of 20 B2 failure cells.
+- **Why one block is lost at B1 and B4 but not B2 and B3** (section 13),
+  and how much of the leader-failure throughput drop that accounts for.
 - **Why 17 leader-failure runs never recovered**, and why they cluster at
   B3 and B4 crash.
 - **Why the replicas usually rotate twice**, and why the second rotation
   costs a second outage at B3 and B4 but not at B1 and B2.
 - **Why throughput settles below normal** after a leader failure at B1,
-  B3 and B4 but not at B2.
+  B3 and B4 but not at B2 -- at B4 and at B1 under a freeze, part of this
+  is the lost block of section 13, in a proportion not yet established.
 
 ---
 
-## 13. Data
+## 16. Data
 
 | file | what |
 |---|---|
@@ -435,6 +604,7 @@ Recorded, with no mechanism proposed for any of them:
 | `analyse_stage_l.py` | the analysis; takes a run-id prefix (`L`, `LT5`, `LT2`, `LT1`) |
 | `make_stage_l_csv.py`, `make_stage_lt_csv.py` | the sweep definitions |
 | `benchmark/fail_inject.sh` | the injector |
+| `analyse_stage_l.py` sections 2-5 | the per-run figures behind sections 5-10 |
 
 Per-run evidence kept on the runs' host under `results/run_logs/<run id>/`:
 `failure-replica-<i>.json` (the injection), `compute-*.jsonl` (command
