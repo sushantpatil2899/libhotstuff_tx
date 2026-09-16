@@ -1,0 +1,265 @@
+LT2: 100 runs, impeachment timeout 2.0
+timeout on all 4 replicas' command lines as expected: 100 runs, not as expected: 0, command line not recorded: 0
+launch offset of injection after first client start + 40 s: median 0.26 s
+
+=== 1. injection verification ===
+  leader crash         verified 20, failed 0
+  leader freeze        verified 20, failed 0
+  follower 3 crash     verified 20, failed 0
+  follower 3 freeze    verified 20, failed 0
+
+=== 2. per baseline: medians over runs not stalled before T ===
+
+########## B1 ##########
+  arm                   n early stall  before tps  lat ms  dip % zero s recover s  peak lat  after tps  lat ms after/before
+  no failure            5           0     165,099    12.1     95      0      0           13    167,463    11.9       100.0%
+  leader crash          5           0     166,874    12.0      0      2      -/5x     3,015    143,473    13.8        85.5%
+  leader freeze         5           0     167,838    11.9      0      2      -/5x        57    144,174    12.5        86.2%
+  follower 3 crash      5           0     166,247    12.0     96      0      0           12    168,221    11.9       100.3%
+  follower 3 freeze     5           0     165,382    12.1     94      0      0/1x        13    165,971    12.0       100.4%
+
+########## B2 ##########
+  arm                   n early stall  before tps  lat ms  dip % zero s recover s  peak lat  after tps  lat ms after/before
+  no failure            5           0     302,444    13.2     88      0      0           15    292,353    13.7        96.6%
+  leader crash          5           0     298,876    13.4      0      2      8/1x     3,018    317,842    12.6       105.8%
+  leader freeze         5           0     299,555    13.3      0      2      3           56    317,296    12.6       106.3%
+  follower 3 crash      5           0     303,122    13.2     98      0      0           13    350,963    11.4       115.9%
+  follower 3 freeze     5           0     293,033    13.6     99      0      0           13    357,173    11.2       121.0%
+
+########## B3 ##########
+  arm                   n early stall  before tps  lat ms  dip % zero s recover s  peak lat  after tps  lat ms after/before
+  no failure            5           0     425,335    18.8     91      0      0           21    421,510    19.0       100.9%
+  leader crash          5           0     427,954    18.5      0      2      7/4x     3,024    366,882    21.7        85.0%
+  leader freeze         5           0     424,555    18.7      0      2      7/4x     3,025    374,841    21.3        88.5%
+  follower 3 crash      5           0     429,754    18.6     93      0      0           20    431,459    18.5        98.8%
+  follower 3 freeze     5           0     425,252    18.8     96      0      0           20    433,773    18.4       102.1%
+
+########## B4 ##########
+  arm                   n early stall  before tps  lat ms  dip % zero s recover s  peak lat  after tps  lat ms after/before
+  no failure            5           0     444,832    71.9     95      0      0           77    430,600    74.3        96.4%
+  leader crash          5           0     439,982    72.5      0      2      7/4x     3,077    372,161    79.2        84.0%
+  leader freeze         5           0     442,233    71.9      0      2      8/3x     3,076    375,482    80.8        84.3%
+  follower 3 crash      5           0     444,731    71.9     90      0      0           80    396,971    80.6        91.4%
+  follower 3 freeze     5           0     447,573    71.5     94      0      0           79    405,975    78.8        92.9%
+
+=== 3. pacemaker: leader at start, rotations, settled leader ===
+  B1 no failure         r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 no failure         r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 no failure         r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 no failure         r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 no failure         r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 leader crash       r1  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B1 leader crash       r2  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B1 leader crash       r3  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B1 leader crash       r4  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B1 leader crash       r5  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B1 leader freeze      r1  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B1 leader freeze      r2  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B1 leader freeze      r3  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B1 leader freeze      r4  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B1 leader freeze      r5  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B1 follower 3 crash   r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 follower 3 crash   r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 follower 3 crash   r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 follower 3 crash   r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 follower 3 crash   r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 follower 3 freeze  r1  start leader [0]  rotate lines  23 (first -39.3s)  settled {0: 1, 1: 1, 2: 1, 3: 0}
+  B1 follower 3 freeze  r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 follower 3 freeze  r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 follower 3 freeze  r4  start leader [0]  rotate lines   1 (first -39.3s)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B1 follower 3 freeze  r5  start leader [0]  rotate lines   1 (first -39.3s)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 no failure         r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 no failure         r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 no failure         r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 no failure         r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 no failure         r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 leader crash       r1  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B2 leader crash       r2  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B2 leader crash       r3  start leader [0]  rotate lines   9 (first +2.0s)  settled {0: 0, 1: 3, 2: 3, 3: 3}
+  B2 leader crash       r4  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B2 leader crash       r5  start leader [0]  rotate lines   9 (first +2.0s)  settled {0: 0, 1: 3, 2: 3, 3: 3}
+  B2 leader freeze      r1  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B2 leader freeze      r2  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B2 leader freeze      r3  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B2 leader freeze      r4  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B2 leader freeze      r5  start leader [0]  rotate lines   3 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B2 follower 3 crash   r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 follower 3 crash   r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 follower 3 crash   r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 follower 3 crash   r4  start leader [0]  rotate lines   6 (first +7.3s)  settled {0: 2, 1: 2, 2: 2, 3: 0}
+  B2 follower 3 crash   r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 follower 3 freeze  r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 follower 3 freeze  r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 follower 3 freeze  r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 follower 3 freeze  r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B2 follower 3 freeze  r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 no failure         r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 no failure         r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 no failure         r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 no failure         r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 no failure         r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 leader crash       r1  start leader [0]  rotate lines  41 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B3 leader crash       r2  start leader [0]  rotate lines  33 (first +2.0s)  settled {0: 0, 1: 3, 2: 3, 3: 3}
+  B3 leader crash       r3  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B3 leader crash       r4  start leader [0]  rotate lines   6 (first -39.6s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B3 leader crash       r5  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B3 leader freeze      r1  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B3 leader freeze      r2  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B3 leader freeze      r3  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B3 leader freeze      r4  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B3 leader freeze      r5  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B3 follower 3 crash   r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 follower 3 crash   r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 follower 3 crash   r3  start leader [0]  rotate lines   6 (first +2.5s)  settled {0: 2, 1: 2, 2: 2, 3: 0}
+  B3 follower 3 crash   r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 follower 3 crash   r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 follower 3 freeze  r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 follower 3 freeze  r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 follower 3 freeze  r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 follower 3 freeze  r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B3 follower 3 freeze  r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 no failure         r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 no failure         r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 no failure         r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 no failure         r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 no failure         r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 leader crash       r1  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B4 leader crash       r2  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B4 leader crash       r3  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B4 leader crash       r4  start leader [0]  rotate lines  27 (first +2.0s)  settled {0: 0, 1: 1, 2: 1, 3: 1}
+  B4 leader crash       r5  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B4 leader freeze      r1  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B4 leader freeze      r2  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B4 leader freeze      r3  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B4 leader freeze      r4  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B4 leader freeze      r5  start leader [0]  rotate lines   6 (first +2.0s)  settled {0: 0, 1: 2, 2: 2, 3: 2}
+  B4 follower 3 crash   r1  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 follower 3 crash   r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 follower 3 crash   r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 follower 3 crash   r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 follower 3 crash   r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 follower 3 freeze  r1  start leader [0]  rotate lines   1 (first -7.8s)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 follower 3 freeze  r2  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 follower 3 freeze  r3  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 follower 3 freeze  r4  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+  B4 follower 3 freeze  r5  start leader [0]  rotate lines   0 (first -)  settled {0: 0, 1: 0, 2: 0, 3: 0}
+
+=== 4. per-second tps around T, first rep of each failure arm ===
+  B1 leader crash       T-3..T+29: 170k 168k 171k 8k 0 0 135k 142k 142k 143k 144k 144k 144k 143k 141k 142k 144k 139k 147k 146k 142k 142k 142k 145k 145k 144k 141k 142k 142k 143k 143k 142k 142k
+  B1 leader freeze      T-3..T+29: 166k 167k 165k 8k 0 0 139k 145k 146k 145k 144k 144k 145k 145k 145k 145k 141k 142k 143k 144k 144k 143k 144k 143k 144k 144k 144k 143k 143k 144k 143k 140k 143k
+  B1 follower 3 crash   T-3..T+29: 169k 170k 170k 168k 168k 167k 166k 166k 166k 168k 167k 167k 164k 164k 161k 163k 165k 163k 165k 165k 164k 165k 165k 165k 166k 167k 167k 169k 170k 169k 168k 166k 165k
+  B1 follower 3 freeze  T-3..T+29: 148k 145k 149k 10k 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+  B2 leader crash       T-3..T+29: 321k 322k 316k 27k 0 0 164k 178k 181k 180k 179k 180k 185k 183k 182k 181k 180k 179k 174k 178k 183k 184k 184k 186k 185k 183k 183k 182k 180k 182k 182k 175k 163k
+  B2 leader freeze      T-3..T+29: 312k 312k 313k 29k 0 0 278k 319k 327k 325k 325k 321k 320k 321k 321k 322k 320k 319k 326k 324k 309k 300k 286k 327k 328k 329k 325k 327k 327k 326k 325k 323k 331k
+  B2 follower 3 crash   T-3..T+29: 306k 307k 309k 347k 358k 358k 351k 358k 358k 356k 357k 363k 364k 361k 333k 306k 329k 343k 345k 362k 369k 367k 358k 355k 360k 360k 360k 360k 361k 360k 354k 363k 362k
+  B2 follower 3 freeze  T-3..T+29: 286k 302k 313k 341k 349k 363k 370k 367k 363k 367k 369k 365k 363k 363k 365k 366k 312k 321k 368k 367k 367k 369k 373k 372k 371k 372k 375k 368k 373k 375k 374k 359k 375k
+  B3 leader crash       T-3..T+29: 421k 414k 400k 79k 0 0 4k 0 0 8k 0 0 1k 0 0 0 0 0 6k 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+  B3 leader freeze      T-3..T+29: 427k 418k 405k 78k 0 0 4k 0 0 315k 387k 388k 394k 386k 382k 379k 385k 383k 387k 386k 383k 380k 381k 388k 389k 389k 387k 385k 386k 387k 383k 384k 386k
+  B3 follower 3 crash   T-3..T+29: 428k 400k 413k 440k 448k 447k 448k 449k 446k 447k 447k 448k 445k 444k 446k 441k 438k 440k 439k 440k 442k 439k 437k 438k 436k 433k 436k 435k 437k 437k 437k 433k 435k
+  B3 follower 3 freeze  T-3..T+29: 421k 415k 407k 420k 422k 423k 429k 433k 436k 435k 429k 423k 414k 420k 428k 427k 430k 431k 430k 431k 425k 427k 431k 434k 438k 421k 408k 411k 427k 432k 430k 434k 436k
+  B4 leader crash       T-3..T+29: 449k 446k 411k 64k 0 1k 8k 0 30k 322k 378k 379k 378k 380k 369k 346k 360k 361k 365k 368k 370k 356k 362k 371k 373k 375k 377k 378k 380k 379k 373k 360k 361k
+  B4 leader freeze      T-3..T+29: 448k 436k 449k 83k 0 0 9k 0 0 312k 387k 385k 382k 374k 373k 373k 371k 373k 375k 371k 370k 367k 369k 369k 372k 373k 373k 371k 377k 383k 380k 365k 372k
+  B4 follower 3 crash   T-3..T+29: 433k 439k 433k 430k 432k 432k 429k 431k 429k 428k 427k 429k 418k 404k 401k 421k 429k 427k 428k 425k 422k 419k 419k 423k 426k 418k 417k 412k 391k 412k 413k 389k 406k
+  B4 follower 3 freeze  T-3..T+29: 451k 437k 440k 436k 413k 409k 427k 423k 428k 422k 407k 416k 411k 417k 417k 413k 407k 397k 401k 406k 404k 405k 406k 406k 386k 368k 376k 401k 413k 407k 409k 400k 386k
+
+=== 5. every run: before tps, after/before, longest zero-commit stretch, recovery, rotations, settled leader ===
+  B1 no failure         r1  before   166,622  after/before  101.8%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 no failure         r2  before   168,267  after/before   99.5%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 no failure         r3  before   165,099  after/before  100.0%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 no failure         r4  before   161,869  after/before  105.6%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 no failure         r5  before   163,782  after/before  100.0%  zero  0s  zero_total  0s  resume    -  recover90   4s  rotations  0 (before T 0)  settled [0]
+  B1 leader crash       r1  before   168,726  after/before   85.5%  zero  2s  zero_total  2s  resume   3s  recover90    -  rotations  3 (before T 0)  settled [1]
+  B1 leader crash       r2  before   166,874  after/before   86.8%  zero  2s  zero_total  2s  resume   3s  recover90    -  rotations  3 (before T 0)  settled [1]
+  B1 leader crash       r3  before   169,136  after/before   84.6%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B1 leader crash       r4  before   163,196  after/before   87.9%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B1 leader crash       r5  before   166,150  after/before   84.9%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B1 leader freeze      r1  before   167,838  after/before   85.7%  zero  2s  zero_total  2s  resume   3s  recover90    -  rotations  3 (before T 0)  settled [1]
+  B1 leader freeze      r2  before   169,313  after/before   84.8%  zero  2s  zero_total  2s  resume   3s  recover90    -  rotations  3 (before T 0)  settled [1]
+  B1 leader freeze      r3  before   166,061  after/before   86.8%  zero  2s  zero_total  2s  resume   3s  recover90    -  rotations  3 (before T 0)  settled [1]
+  B1 leader freeze      r4  before   171,112  after/before   86.2%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B1 leader freeze      r5  before   166,242  after/before   88.1%  zero  2s  zero_total  2s  resume   3s  recover90    -  rotations  3 (before T 0)  settled [1]
+  B1 follower 3 crash   r1  before   167,191  after/before   99.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 follower 3 crash   r2  before   169,760  after/before  100.2%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 follower 3 crash   r3  before   166,247  after/before  101.2%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 follower 3 crash   r4  before   160,271  after/before  106.4%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 follower 3 crash   r5  before   165,426  after/before  100.3%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 follower 3 freeze  r1  before   145,734  after/before   59.8%  zero 36s  zero_total 38s  resume    -  recover90    -  rotations 23 (before T 1)  settled [1]
+  B1 follower 3 freeze  r2  before   167,486  after/before  100.6%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 follower 3 freeze  r3  before   162,585  after/before  102.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B1 follower 3 freeze  r4  before   165,382  after/before  100.4%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  1 (before T 1)  settled [0]
+  B1 follower 3 freeze  r5  before   168,737  after/before   96.1%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  1 (before T 1)  settled [0]
+  B2 no failure         r1  before   302,444  after/before   95.1%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 no failure         r2  before   294,387  after/before   99.2%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 no failure         r3  before   300,034  after/before  103.2%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 no failure         r4  before   302,708  after/before   96.6%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 no failure         r5  before   307,722  after/before   95.0%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 leader crash       r1  before   297,527  after/before   61.2%  zero  2s  zero_total  2s  resume   3s  recover90    -  rotations  3 (before T 0)  settled [1]
+  B2 leader crash       r2  before   300,361  after/before  105.8%  zero  2s  zero_total  4s  resume   6s  recover90   6s  rotations  6 (before T 0)  settled [2]
+  B2 leader crash       r3  before   288,402  after/before  112.5%  zero  5s  zero_total  7s  resume   9s  recover90   9s  rotations  9 (before T 0)  settled [3]
+  B2 leader crash       r4  before   298,876  after/before  109.5%  zero  2s  zero_total  4s  resume   6s  recover90   6s  rotations  6 (before T 0)  settled [2]
+  B2 leader crash       r5  before   301,447  after/before  105.1%  zero  5s  zero_total  7s  resume   9s  recover90  10s  rotations  9 (before T 0)  settled [3]
+  B2 leader freeze      r1  before   295,586  after/before  107.3%  zero  2s  zero_total  2s  resume   3s  recover90   3s  rotations  3 (before T 0)  settled [1]
+  B2 leader freeze      r2  before   307,413  after/before  102.3%  zero  2s  zero_total  4s  resume   6s  recover90   6s  rotations  6 (before T 0)  settled [2]
+  B2 leader freeze      r3  before   299,105  after/before  106.0%  zero  2s  zero_total  2s  resume   3s  recover90   3s  rotations  3 (before T 0)  settled [1]
+  B2 leader freeze      r4  before   307,598  after/before  106.3%  zero  1s  zero_total  2s  resume   5s  recover90   6s  rotations  6 (before T 0)  settled [2]
+  B2 leader freeze      r5  before   299,555  after/before  107.4%  zero  2s  zero_total  2s  resume   3s  recover90   3s  rotations  3 (before T 0)  settled [1]
+  B2 follower 3 crash   r1  before   311,684  after/before  112.6%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 follower 3 crash   r2  before   287,283  after/before  121.4%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 follower 3 crash   r3  before   301,831  after/before  115.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 follower 3 crash   r4  before   303,122  after/before  120.5%  zero  2s  zero_total  4s  resume  11s  recover90   0s  rotations  6 (before T 0)  settled [2]
+  B2 follower 3 crash   r5  before   311,721  after/before  115.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 follower 3 freeze  r1  before   288,736  after/before  123.7%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 follower 3 freeze  r2  before   292,367  after/before  121.0%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 follower 3 freeze  r3  before   300,308  after/before  118.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 follower 3 freeze  r4  before   293,033  after/before  122.6%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B2 follower 3 freeze  r5  before   313,560  after/before  109.8%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 no failure         r1  before   416,339  after/before  101.2%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 no failure         r2  before   413,964  after/before   97.5%  zero  0s  zero_total  0s  resume    -  recover90   1s  rotations  0 (before T 0)  settled [0]
+  B3 no failure         r3  before   433,476  after/before   96.7%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 no failure         r4  before   427,297  after/before  100.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 no failure         r5  before   425,335  after/before  100.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 leader crash       r1  before   423,233  after/before    0.0%  zero 19s  zero_total 34s  resume    -  recover90    -  rotations 41 (before T 0)  settled [1]
+  B3 leader crash       r2  before   441,085  after/before    0.0%  zero 30s  zero_total 36s  resume    -  recover90    -  rotations 33 (before T 0)  settled [3]
+  B3 leader crash       r3  before   433,580  after/before   85.0%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B3 leader crash       r4  before   427,954  after/before   85.7%  zero  1s  zero_total  2s  resume   5s  recover90    -  rotations  6 (before T 1)  settled [2]
+  B3 leader crash       r5  before   408,624  after/before   93.8%  zero  2s  zero_total  4s  resume   6s  recover90   7s  rotations  6 (before T 0)  settled [2]
+  B3 leader freeze      r1  before   428,749  after/before   89.8%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B3 leader freeze      r2  before   427,342  after/before   87.2%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B3 leader freeze      r3  before   423,775  after/before   88.5%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B3 leader freeze      r4  before   424,555  after/before   87.2%  zero  1s  zero_total  2s  resume   5s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B3 leader freeze      r5  before   419,244  after/before   89.7%  zero  2s  zero_total  4s  resume   6s  recover90   7s  rotations  6 (before T 0)  settled [2]
+  B3 follower 3 crash   r1  before   431,658  after/before   98.8%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 follower 3 crash   r2  before   439,654  after/before   98.1%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 follower 3 crash   r3  before   425,717  after/before  102.4%  zero  2s  zero_total  4s  resume   6s  recover90   7s  rotations  6 (before T 0)  settled [2]
+  B3 follower 3 crash   r4  before   421,079  after/before  103.3%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 follower 3 crash   r5  before   429,754  after/before   98.0%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 follower 3 freeze  r1  before   425,252  after/before  102.1%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 follower 3 freeze  r2  before   407,491  after/before  103.5%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 follower 3 freeze  r3  before   434,214  after/before   99.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 follower 3 freeze  r4  before   422,775  after/before  103.2%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B3 follower 3 freeze  r5  before   432,597  after/before  100.1%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 no failure         r1  before   435,331  after/before  101.8%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 no failure         r2  before   444,832  after/before   96.8%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 no failure         r3  before   445,142  after/before   95.5%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 no failure         r4  before   436,488  after/before   96.4%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 no failure         r5  before   455,729  after/before   95.0%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 leader crash       r1  before   444,388  after/before   84.0%  zero  1s  zero_total  2s  resume   5s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B4 leader crash       r2  before   444,291  after/before   80.0%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B4 leader crash       r3  before   421,423  after/before   90.9%  zero  2s  zero_total  4s  resume   6s  recover90   7s  rotations  6 (before T 0)  settled [2]
+  B4 leader crash       r4  before   419,448  after/before    0.0%  zero 36s  zero_total 38s  resume    -  recover90    -  rotations 27 (before T 0)  settled [1]
+  B4 leader crash       r5  before   439,982  after/before   84.6%  zero  1s  zero_total  2s  resume   5s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B4 leader freeze      r1  before   453,036  after/before   82.9%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B4 leader freeze      r2  before   442,233  after/before   82.8%  zero  1s  zero_total  2s  resume   5s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B4 leader freeze      r3  before   438,869  after/before   90.2%  zero  2s  zero_total  4s  resume   6s  recover90   8s  rotations  6 (before T 0)  settled [2]
+  B4 leader freeze      r4  before   439,810  after/before   89.0%  zero  1s  zero_total  2s  resume   5s  recover90   7s  rotations  6 (before T 0)  settled [2]
+  B4 leader freeze      r5  before   443,700  after/before   84.3%  zero  2s  zero_total  4s  resume   6s  recover90    -  rotations  6 (before T 0)  settled [2]
+  B4 follower 3 crash   r1  before   434,228  after/before   91.4%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 follower 3 crash   r2  before   449,752  after/before   95.0%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 follower 3 crash   r3  before   416,618  after/before   94.3%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 follower 3 crash   r4  before   444,731  after/before   86.4%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 follower 3 crash   r5  before   467,375  after/before   91.2%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 follower 3 freeze  r1  before   449,580  after/before   87.8%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  1 (before T 1)  settled [0]
+  B4 follower 3 freeze  r2  before   447,735  after/before   94.7%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 follower 3 freeze  r3  before   432,224  after/before   92.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 follower 3 freeze  r4  before   426,372  after/before   95.2%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]
+  B4 follower 3 freeze  r5  before   447,573  after/before   92.9%  zero  0s  zero_total  0s  resume    -  recover90   0s  rotations  0 (before T 0)  settled [0]

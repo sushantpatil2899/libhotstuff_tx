@@ -176,6 +176,13 @@ for b, arm, rep, d, series, t0, nclients, rec, met in raw:
     for _, c, _ in post:
         cur = cur + 1 if c == 0 else 0
         zero = max(zero, cur)
+    # Seconds with no commits at all in [T, T+40), and the second at which
+    # commits resumed for the rest of that window (None if it ends at zero).
+    zero_total = sum(1 for _, c, _ in post if c == 0)
+    last_zero = max((k for k, (_, c, _) in enumerate(post) if c == 0),
+                    default=None)
+    resume = (None if last_zero is None or last_zero == len(post) - 1
+              else last_zero + 1)
     recover = None
     for k in range(len(post) - 4):
         if all(post[k + j][1] >= 0.9 * before_tps for j in range(5)):
@@ -185,7 +192,8 @@ for b, arm, rep, d, series, t0, nclients, rec, met in raw:
     ev = pacemaker_events(d, T)
     runs[(b, arm)].append(dict(
         rep=rep, before=before_tps, before_lat=before_lat, after=after_tps,
-        after_lat=after_lat, dip=dip, zero=zero, recover=recover,
+        after_lat=after_lat, dip=dip, zero=zero, zero_total=zero_total,
+        resume=resume, recover=recover,
         peak_lat=max(lats) if lats else None, events=ev,
         stalled_early=before_tps == 0, nclients=nclients,
         state=rec.get('state_after_1s') if rec else None))
@@ -279,5 +287,7 @@ for b in ('B1', 'B2', 'B3', 'B4'):
             rec = '-' if x['recover'] is None else f'{x["recover"]}s'
             print(f'  {b} {LABEL[arm]:<18} r{x["rep"]}  before {x["before"]:>9,.0f}  '
                   f'after/before {ratio:>6.1f}%  zero {x["zero"]:>2}s  '
+                  f'zero_total {x["zero_total"]:>2}s  resume '
+                  f'{"-" if x["resume"] is None else str(x["resume"]) + "s":>4}  '
                   f'recover90 {rec:>4}  rotations {len(rot):>2} '
                   f'(before T {pre})  settled {settled}')
