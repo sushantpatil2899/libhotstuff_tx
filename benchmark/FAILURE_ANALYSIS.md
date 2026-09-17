@@ -540,7 +540,7 @@ is a faster block pipeline, with blocks always full at 800 commands:
 Splitting the leader's block cycle into three measured segments, from its
 own log, puts the whole gain in one of them:
 
-| baseline | window | quorum wait | QC formed | next block | gap |
+| baseline | window | quorum wait | "QC formed" (see 15.2) | next block | gap |
 |---|---|---|---|---|---|
 | B1 | before -> after | 0.98 -> 1.00 | 0.02 -> 0.02 | 0.16 -> 0.16 | 1.17 -> 1.18 |
 | **B2** | before -> after | 1.58 -> 1.60 | **0.49 -> 0.02** | 0.53 -> 0.56 | **2.58 -> 2.19** |
@@ -623,10 +623,22 @@ B2, four replicas, no failure, against its usual `repnworker` 4 and
 | `repburst` 10,000 | 311,695 | 0.32 ms |
 
 Eight times the worker threads, and a hundredfold change in burst size,
-leave it where it was. **Blocks were full in every cell of the sweep** --
+leave it where it was. Blocks were full in every cell of the sweep --
 median and minimum both equal to the configured block size, in 100% of
-blocks -- so it is not the leader waiting for enough commands to fill a
-block.
+blocks.
+
+> **Correction.** An earlier version of this section concluded from the
+> full blocks that the delay "is not the leader waiting for enough
+> commands to fill a block". The code does not support that inference.
+> The leader proposes only once a full block of commands has arrived
+> (`src/hotstuff.cpp`, `cmd_pending` handler: `beat()` is called when
+> `cmd_pending_buffer.size() >= blk_size`), so blocks are full whether or
+> not the leader waited for them. What the "got QC" line marks is the later
+> of two events -- the previous block's QC, and a full block of commands
+> being ready (`proposer_schedule_next` in
+> `include/hotstuff/liveness.h`) -- and the segment called "QC formed"
+> above cannot tell them apart. Stage MB logs the second event directly
+> (section 15.5).
 
 ### 15.3 Where it appears
 

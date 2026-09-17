@@ -463,6 +463,11 @@ void HotStuffBase::start(
                     cmds.push_back(cmd_pending_buffer.front());
                     cmd_pending_buffer.pop();
                 }
+                /* The moment a full block of commands is ready. The
+                   pacemaker proposes at the later of this and the previous
+                   block's QC, so this line separates the two. */
+                HOTSTUFF_LOG_PROTO("beat: block of %zu ready, %zu left in buffer",
+                                   blk_size, cmd_pending_buffer.size());
                 pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
                     if (proposer == get_id()){
                         HOTSTUFF_LOG_DEBUG("[[cmd_pending.reg_handler]] [R-%d] [L-%d] pacemaker beat done", get_id(), proposer);
