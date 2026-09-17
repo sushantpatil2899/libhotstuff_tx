@@ -763,8 +763,16 @@ class CloudLabBench:
     # ------------------------------------------------------------------
 
     def run_from_csv(self, input_file: str, output_file: str,
-                     debug: bool = False, proto_log: bool = False) -> None:
-        """Read ``input_file``, run each row, write ``output_file``."""
+                     debug: bool = False, proto_log: bool = False,
+                     skip_update: bool = False) -> None:
+        """Read ``input_file``, run each row, write ``output_file``.
+
+        ``skip_update=True`` runs the binaries already built on every host
+        instead of resetting each repo to the remote branch and rebuilding.
+        It exists for temporary diagnostic builds that are applied to the
+        hosts uncommitted: the normal update hard-resets to the remote and
+        would discard them.
+        """
         Print.heading(f'Starting CSV-driven CloudLab benchmark: {input_file}')
 
         with open(input_file, 'r') as f:
@@ -790,7 +798,11 @@ class CloudLabBench:
         except ConfigError as e:
             raise BenchError(f'First row has invalid bench params', e)
         try:
-            self._update(first_bench, proto_log=proto_log)
+            if skip_update:
+                Print.warn('Skipping update: running the binaries already '
+                           'built on each host')
+            else:
+                self._update(first_bench, proto_log=proto_log)
         except (GroupException, ExecutionError, SSHException,
                 OSError, EOFError) as e:
             e = FabricError(e) if isinstance(e, GroupException) else e

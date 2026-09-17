@@ -40,7 +40,7 @@ def install_cloudlab(ctx):
 @task
 def experiment_cloudlab(ctx, input_csv='experiments.csv',
                        output_csv='results/experiment_results.csv',
-                       debug=False, proto_log=False):
+                       debug=False, proto_log=False, skip_update=False):
     """Run CSV-driven experiments on CloudLab nodes.
 
     Reads experiment configurations from ``input_csv``, executes each
@@ -57,11 +57,16 @@ def experiment_cloudlab(ctx, input_csv='experiments.csv',
     ``--proto-log`` rebuilds with HOTSTUFF_PROTO_LOG=ON so replicas log
     one line per consensus event, including the per-block ``ncmds=``.
     The rebuild happens once per invocation, not per row.
+
+    ``--skip-update`` runs the binaries already built on each host, without
+    the reset to the remote branch and the rebuild. Use it only for a
+    temporary diagnostic build applied to the hosts by hand.
     """
     try:
         CloudLabBench(ctx).run_from_csv(input_csv, output_csv,
                                        debug=bool(debug),
-                                       proto_log=bool(proto_log))
+                                       proto_log=bool(proto_log),
+                                       skip_update=bool(skip_update))
     except BenchError as e:
         Print.error(e)
 
