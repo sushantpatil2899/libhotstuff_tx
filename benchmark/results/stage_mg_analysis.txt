@@ -1,0 +1,41 @@
+=== MG_B1_lead_freeze_r1  stuck 200  confirmations: 0 reply: 200
+        received  buffered  in a block  re-proposed  already pending
+  r0         0         0           0            0                0
+  r1       200         0           0            0                0
+  r2       200       200         200            0                0
+  r3       200         0           0            0                0
+  of 200 stuck commands: seen by no replica in the window 0; never in a block or re-proposal 0
+  first seen at a replica: T+12.027 .. T+12.033 s
+=== MG_B1_lead_freeze_r2  stuck 200  confirmations: 0 reply: 200
+        received  buffered  in a block  re-proposed  already pending
+  r0         0         0           0            0                0
+  r1       200         0           0            0                0
+  r2       200       200         200            0                0
+  r3       200         0           0            0                0
+  of 200 stuck commands: seen by no replica in the window 0; never in a block or re-proposal 0
+  first seen at a replica: T+12.027 .. T+12.033 s
+=== MG_B1_lead_freeze_r3  stuck 200  confirmations: 0 reply: 200
+        received  buffered  in a block  re-proposed  already pending
+  r0         0         0           0            0                0
+  r1       200         0           0            0                0
+  r2       200       200         200            0                0
+  r3       200         0           0            0                0
+  of 200 stuck commands: seen by no replica in the window 0; never in a block or re-proposal 0
+  first seen at a replica: T+12.026 .. T+12.034 s
+=== MG_B4_lead_crash_r1  stuck 0  confirmations: 
+=== MG_B4_lead_crash_r2  stuck 32,000  confirmations: 0 reply: 32,000
+        received  buffered  in a block  re-proposed  already pending
+  r0         0         0           0            0                0
+  r1    22,643         0           0            0                0
+  r2    22,785         0           0            0                0
+  r3         0         0           0            0                0
+  of 32,000 stuck commands: seen by no replica in the window 7,974; never in a block or re-proposal 32,000
+  first seen at a replica: T+41.120 .. T+41.320 s
+=== MG_B4_lead_crash_r3  stuck 32,000  confirmations: 0 reply: 32,000
+        received  buffered  in a block  re-proposed  already pending
+  r0         0         0           0            0                0
+  r1    22,560         0           0            0                0
+  r2    32,000         0           0            0                0
+  r3    32,000         0           0            0                0
+  of 32,000 stuck commands: seen by no replica in the window 0; never in a block or re-proposal 32,000
+  first seen at a replica: T+41.097 .. T+50.401 s

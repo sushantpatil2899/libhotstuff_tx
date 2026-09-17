@@ -14,9 +14,9 @@ Phase 3 of the study. Measurement conventions and baselines are those of
 Reservation: CloudLab Utah Exp-3, `d6515` nodes (AMD EPYC 7452, 32 physical
 cores / 64 hardware threads, 125 GB), 4 replicas + 1 client host.
 
-Totals: **499 runs** in six sweeps (Stage L 100, Stage LT 300, Stage M
-54, Stage MB 15, Stage MS 12, Stage MF 18), 0 run errors, 0 parse
-failures.
+Totals: **505 runs** in seven sweeps (Stage L 100, Stage LT 300, Stage M
+54, Stage MB 15, Stage MS 12, Stage MF 18, Stage MG 6), 0 run errors,
+0 parse failures.
 
 **Only findings are recorded. No mechanism is proposed for any of them.**
 
@@ -863,10 +863,57 @@ from each client's own start, placed against the injection time T.
    decided.** Every decided block after the failure was answered by at
    least two survivors for every command.
 
-**Not established:** what happens at the replicas to commands arriving in
-those few milliseconds after the re-proposal starts; why 2 of the 10 runs
-with a second re-proposal lost nothing; and why B2 reaches a second
+**Not established here:** what happens at the replicas to commands
+arriving in those few milliseconds -- measured in 15.8; why 2 of the 10
+runs with a second re-proposal lost nothing; and why B2 reaches a second
 re-proposal in only 1 of 6 runs.
+
+### 15.8 Stage MG -- the lost block is assembled and never proposed
+
+6 runs on a **temporary diagnostic build** applied to the hosts
+uncommitted and removed after the sweep (launched with `--skip-update`;
+this repository never carried it). It adds logging only, from a rotation
+until 200 ms after it stops: every command a replica receives and whether
+it was buffered, every command placed in a full block, whether that block
+was then proposed, every re-proposed command, and on each client at
+shutdown every command still waiting after 10 s.
+
+**B1 leader freeze, 3 of 3 runs, identical:**
+
+| stuck commands, per replica | r0 (failed) | r1 | r2 (second new leader) | r3 |
+|---|---|---|---|---|
+| received | 0 | 200 | 200 | 200 |
+| buffered | 0 | 0 | **200** | 0 |
+| placed in a full block | 0 | 0 | **200** | 0 |
+| re-proposed | 0 | 0 | 0 | 0 |
+
+- All 200 stuck commands got **0 replies** from any replica.
+- All three survivors received them, 6-8 ms after the new leader took
+  over (T+12.026 .. T+12.034 s).
+- The new leader buffered all 200 and assembled them into **one full
+  block that was never proposed**. It assembled 42-44 blocks in the
+  window and proposed 37-38, and in every run the block missing a
+  proposal is the one holding the stuck commands. It was assembled 0.192 s
+  before the logging window closed, and blocks assembled after it were
+  proposed normally, so this is not an artefact of where the window ends.
+- No further rotation followed, and the commands were never re-proposed.
+
+Assembling a block removes its commands from the leader's pending buffer
+(`src/hotstuff.cpp`, `cmd_pending` handler). Once that block is not
+proposed, those commands sit in no buffer and in no block, and they
+arrived after the new leader had taken its re-proposal snapshot. The
+client never re-sends, so the slots stay occupied to the end of the run.
+That is exactly one block, the size measured in section 13.
+
+**B4 is not usable from this sweep.** At 3,200 commands per block the
+per-command logging is heavy, and these runs behaved unlike every earlier
+sweep: 2 of 3 never recovered (all 32,000 requests stuck, first seen at
+T+41 s) and the third lost nothing. The instrument changed what it was
+measuring, so B4's one-block loss rests on Stage MF (15.7), whose logging
+was per block rather than per command.
+
+**Not established:** why that one block's proposal never happens, when
+blocks the same leader assembles moments later are proposed normally.
 
 > **Diagnostic builds (recorded 2026-09-17).** Stages MB, MS and MF ran on
 > builds with temporary, purely additive diagnostics in the protocol code:
@@ -877,7 +924,8 @@ re-proposal in only 1 of 6 runs.
 > been removed: `src/hotstuff.cpp`, `include/hotstuff/hotstuff.h` and
 > `examples/hotstuff_client.cpp` are back to their state before `5a9b1fc`.
 > Any later diagnostic is applied to the build hosts uncommitted and
-> removed after the run.
+> removed after the run, as Stage MG's was (15.8): the hosts were reset to
+> this repository's code and rebuilt once the sweep finished.
 
 ---
 
@@ -885,10 +933,8 @@ re-proposal in only 1 of 6 runs.
 
 Recorded, with no mechanism proposed for any of them:
 
-- **What happens to commands sent in the few milliseconds after the second
-  leader starts re-proposing** (15.7). Those are the lost block; they
-  appear in no block the survivors decide. Loss needs that second
-  re-proposal (8 of 10 runs with one, 0 of 8 without).
+- **Why the block holding those commands is never proposed** (15.8), when
+  blocks the same leader assembles moments later are proposed normally.
 - **Why 17 leader-failure runs never recovered**, and why they cluster at
   B3 and B4 crash.
 - **Why the replicas usually rotate twice**, and why the second rotation
@@ -906,6 +952,10 @@ Answered, kept for the record:
   With enough client capacity the gain is +0.5%.
 - **How much of the leader-failure drop the lost block accounts for**
   (15.1): none.
+- **Where the lost block goes** (15.8): the new leader receives those
+  commands, buffers them, and assembles them into one full block that is
+  never proposed. Assembling it removed them from the buffer, so nothing
+  holds them and nothing re-proposes them.
 
 Decided, not pursued:
 
@@ -935,6 +985,8 @@ Decided, not pursued:
 | `analyse_stage_mb.py`, `make_stage_mb_csv.py` | the Stage MB analysis, and the sweep with its predictions |
 | `results/stage_ms_results.csv`, `results/stage_ms_analysis.txt` | Stage MS, 12 runs |
 | `analyse_stage_ms.py`, `make_stage_ms_csv.py` | the Stage MS analysis, and the sweep with its predictions |
+| `results/stage_mg_results.csv`, `results/stage_mg_analysis.txt` | Stage MG, 6 runs |
+| `analyse_stage_mg.py`, `make_stage_mg_csv.py` | the Stage MG analysis and sweep (the diagnostic itself is not in the repo) |
 | `analyse_stage_l.py` sections 2-5 | the per-run figures behind sections 5-10 |
 
 Per-run evidence kept on the runs' host under `results/run_logs/<run id>/`:
