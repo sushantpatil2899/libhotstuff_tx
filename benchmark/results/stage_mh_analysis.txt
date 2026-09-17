@@ -1,0 +1,44 @@
+=== MH_B1_lead_crash_r1  stuck 200  replies [0]  re-proposals 2  rotations [1, 2]
+    throughput 133,991 vs LT5 145,439 (no failure 165,805); latency 13.985 ms vs 13.4 ms; replica logs 22 MB
+    blocks assembled 85,233, never resolved 3, of those holding a stuck command 1
+      r2 block first=78a8be7f02 assembled T+12.0181 n=200
+      r1 beat discarded at schedule_next: T+6.0103
+      r2 beat discarded at schedule_next: T+12.0185
+=== MH_B1_lead_crash_r2  stuck 0  replies -  re-proposals 1  rotations [1]
+    throughput 139,239 vs LT5 145,439 (no failure 165,805); latency 14.359 ms vs 13.4 ms; replica logs 23 MB
+    blocks assembled 88,383, never resolved 3, of those holding a stuck command 0
+      r1 beat discarded at schedule_next: T+6.0104
+=== MH_B1_lead_crash_r3  stuck 200  replies [0]  re-proposals 2  rotations [1, 2]
+    throughput 135,920 vs LT5 145,439 (no failure 165,805); latency 13.785 ms vs 13.4 ms; replica logs 209 MB
+    blocks assembled 86,558, never resolved 6, of those holding a stuck command 1
+      r2 block first=aca819a474 assembled T+12.0213 n=200
+      r1 beat discarded at schedule_next: T+6.0133
+      r2 beat discarded at schedule_next: T+12.0218
+=== MH_B1_lead_crash_r4  stuck 0  replies -  re-proposals 1  rotations [1]
+    throughput 140,772 vs LT5 145,439 (no failure 165,805); latency 14.202 ms vs 13.4 ms; replica logs 215 MB
+    blocks assembled 89,215, never resolved 2, of those holding a stuck command 0
+      r1 beat discarded at schedule_next: T+6.0114
+=== MH_B1_lead_crash_r5  stuck 400  replies [0]  re-proposals 2  rotations [1, 2]
+    throughput 134,631 vs LT5 145,439 (no failure 165,805); latency 12.985 ms vs 13.4 ms; replica logs 22 MB
+    blocks assembled 85,679, never resolved 7, of those holding a stuck command 2
+      r2 block first=c084d24d31 assembled T+12.0194 n=200
+      r2 block first=1bdafac85c assembled T+12.0208 n=200
+      r1 beat discarded at schedule_next: T+6.0123
+      r2 beat discarded at schedule_next: T+12.0206
+      r2 beat discarded at schedule_next: T+12.0217
+=== MH_B4_lead_crash_r1  stuck 0  replies -  re-proposals 1  rotations [1, 2]
+    throughput 361,847 vs LT5 363,805 (no failure 433,081); latency 88.416 ms vs 80.0 ms; replica logs 4 MB
+    blocks assembled 14,503, never resolved 5, of those holding a stuck command 0
+      r1 beat discarded at schedule_next: T+6.0339
+=== MH_B4_lead_crash_r2  stuck 3,200  replies [0]  re-proposals 2  rotations [1, 2]
+    throughput 346,225 vs LT5 363,805 (no failure 433,081); latency 86.629 ms vs 80.0 ms; replica logs 4 MB
+    blocks assembled 13,913, never resolved 7, of those holding a stuck command 1
+      r2 block first=e625781bba assembled T+12.0679 n=3200
+      r1 beat discarded at schedule_next: T+6.0432
+      r2 beat discarded at schedule_next: T+12.0926
+=== MH_B4_lead_crash_r3  stuck 3,200  replies [0]  re-proposals 2  rotations [1, 2]
+    throughput 357,900 vs LT5 363,805 (no failure 433,081); latency 83.801 ms vs 80.0 ms; replica logs 4 MB
+    blocks assembled 14,364, never resolved 7, of those holding a stuck command 1
+      r2 block first=94596aac90 assembled T+12.0590 n=3200
+      r1 beat discarded at schedule_next: T+6.0329
+      r2 beat discarded at schedule_next: T+12.0872

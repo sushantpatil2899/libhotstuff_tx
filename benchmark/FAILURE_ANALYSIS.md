@@ -14,9 +14,9 @@ Phase 3 of the study. Measurement conventions and baselines are those of
 Reservation: CloudLab Utah Exp-3, `d6515` nodes (AMD EPYC 7452, 32 physical
 cores / 64 hardware threads, 125 GB), 4 replicas + 1 client host.
 
-Totals: **505 runs** in seven sweeps (Stage L 100, Stage LT 300, Stage M
-54, Stage MB 15, Stage MS 12, Stage MF 18, Stage MG 6), 0 run errors,
-0 parse failures.
+Totals: **513 runs** in eight sweeps (Stage L 100, Stage LT 300, Stage M
+54, Stage MB 15, Stage MS 12, Stage MF 18, Stage MG 6, Stage MH 8), 0 run
+errors, 0 parse failures.
 
 **Only findings are recorded. No mechanism is proposed for any of them.**
 
@@ -912,8 +912,76 @@ T+41 s) and the third lost nothing. The instrument changed what it was
 measuring, so B4's one-block loss rests on Stage MF (15.7), whose logging
 was per block rather than per command.
 
-**Not established:** why that one block's proposal never happens, when
-blocks the same leader assembles moments later are proposed normally.
+**Why that proposal never happens is measured in 15.9:** the beat's turn
+is discarded by a rejected promise.
+
+### 15.9 Stage MH -- the lost block is a discarded beat
+
+8 runs, 0 errors, on a **temporary diagnostic build** applied to the hosts
+uncommitted and removed afterwards (58 lines added, none changed). It is
+deliberately lighter than Stage MG's: two lines per block rather than one
+per command, and per-command output only at client shutdown.
+
+In the code a beat is popped from `pending_beats` and then waits on a
+single promise slot, `pm_qc_finish`, which the next scheduling pass, a
+`rotate` or a `stop_rotate` **rejects**
+(`include/hotstuff/liveness.h`, `proposer_schedule_next`). A rejected
+promise never fires, so that beat is never proposed even though its
+commands have already left `cmd_pending_buffer`. This build logs the
+discard where it happens.
+
+| run | stuck | replies | re-proposals | assembled, never proposed, holding stuck commands | beat discarded |
+|---|---|---|---|---|---|
+| B1 crash r1 | 200 | 0 | 2 | r2, T+12.0181, n=200 | r1 T+6.0103; **r2 T+12.0185** |
+| B1 crash r2 | 0 | -- | 1 | none | r1 T+6.0104 |
+| B1 crash r3 | 200 | 0 | 2 | r2, T+12.0213, n=200 | r1 T+6.0133; **r2 T+12.0218** |
+| B1 crash r4 | 0 | -- | 1 | none | r1 T+6.0114 |
+| B1 crash r5 | **400** | 0 | 2 | r2, T+12.0194 and T+12.0208, n=200 each | r1 T+6.0123; **r2 T+12.0206 and T+12.0217** |
+| B4 crash r1 | 0 | -- | 1 | none | r1 T+6.0339 |
+| B4 crash r2 | 3,200 | 0 | 2 | r2, T+12.0679, n=3,200 | r1 T+6.0432; **r2 T+12.0926** |
+| B4 crash r3 | 3,200 | 0 | 2 | r2, T+12.0590, n=3,200 | r1 T+6.0329; **r2 T+12.0872** |
+
+1. **The counts match exactly.** Stuck commands = discards on the second
+   new leader x block size: one discard gives 200 (B1) or 3,200 (B4); the
+   run with **two** discards lost **400**. Every stuck command had 0
+   replies.
+2. **Each stuck block is assembled and never proposed**, and a discard is
+   logged on the same replica 0.4-34 ms after that assembly.
+3. **No discard on the second leader, no loss** -- the three runs without
+   a second re-proposal lost nothing.
+4. **The discard at the first new leader costs nothing.** All 8 runs have
+   one, at T+6.01-6.04, including the three that lost nothing. Why that
+   one is harmless is **not established**.
+
+Taken with 15.7 and 15.8, the sequence is measured end to end: commands
+arrive at a new leader just after it has taken its re-proposal snapshot,
+go only into its buffer, are removed from the buffer to form one full
+block, and that block's turn to be proposed is discarded by a rejected
+promise. Afterwards they are in no buffer, no block and no snapshot, and
+the client never re-sends.
+
+**Did the instrument change the result?**
+
+| | this build | Stage LT5, same cells, no diagnostic |
+|---|---|---|
+| B1 throughput after the failure | 133,991 - 140,772 | 145,439 |
+| B1 latency | 13.0 - 14.4 ms | 13.4 ms |
+| B4 throughput after the failure | 346,225 - 361,847 | 363,805 |
+| B4 latency | 83.8 - 88.4 ms | 80.0 ms |
+
+Throughput is **3-8% lower** with the diagnostic, so its figures are not
+used as performance measurements. What it is used for is unaffected: the
+loss is exactly one block per discard, and **B4 behaved normally again**
+(0 or exactly 3,200 stuck, every run recovered), where Stage MG's heavier
+logging had left 2 of 3 B4 runs never recovering. Loss frequency at B1
+leader crash was 3 of 5 here against 9 of 24 in the uninstrumented Stages
+L and LT -- the same order, on a small sample.
+
+**Not established:** why the first new leader's discard is harmless; and
+the losses that Stages L and LT recorded in runs with only one
+re-proposal (9 of 24 B1 crash runs, 3 of 33 B2 runs) were not reproduced
+here, so they are not directly verified -- all 5 losses in this sweep had
+a second re-proposal.
 
 > **Diagnostic builds (recorded 2026-09-17).** Stages MB, MS and MF ran on
 > builds with temporary, purely additive diagnostics in the protocol code:
@@ -933,8 +1001,10 @@ blocks the same leader assembles moments later are proposed normally.
 
 Recorded, with no mechanism proposed for any of them:
 
-- **Why the block holding those commands is never proposed** (15.8), when
-  blocks the same leader assembles moments later are proposed normally.
+- **Why the first new leader's discarded beat costs nothing** while the
+  second leader's loses a block (15.9).
+- **The losses recorded with only one re-proposal** (9 of 24 B1 crash runs,
+  3 of 33 B2 runs in Stages L and LT), which Stage MH did not reproduce.
 - **Why 17 leader-failure runs never recovered**, and why they cluster at
   B3 and B4 crash.
 - **Why the replicas usually rotate twice**, and why the second rotation
@@ -952,10 +1022,13 @@ Answered, kept for the record:
   With enough client capacity the gain is +0.5%.
 - **How much of the leader-failure drop the lost block accounts for**
   (15.1): none.
-- **Where the lost block goes** (15.8): the new leader receives those
-  commands, buffers them, and assembles them into one full block that is
-  never proposed. Assembling it removed them from the buffer, so nothing
-  holds them and nothing re-proposes them.
+- **Where the lost block goes** (15.8, 15.9): commands arriving just after
+  a new leader's re-proposal snapshot go only into its buffer, leave the
+  buffer to form one full block, and that block's turn to be proposed is
+  discarded by a rejected promise (`pm_qc_finish`). Stuck commands equal
+  discards x block size, exactly, including a run that lost two blocks
+  after two discards. They are then in no buffer, no block and no
+  snapshot, and the client never re-sends.
 
 Decided, not pursued:
 
@@ -987,6 +1060,8 @@ Decided, not pursued:
 | `analyse_stage_ms.py`, `make_stage_ms_csv.py` | the Stage MS analysis, and the sweep with its predictions |
 | `results/stage_mg_results.csv`, `results/stage_mg_analysis.txt` | Stage MG, 6 runs |
 | `analyse_stage_mg.py`, `make_stage_mg_csv.py` | the Stage MG analysis and sweep (the diagnostic itself is not in the repo) |
+| `results/stage_mh_results.csv`, `results/stage_mh_analysis.txt` | Stage MH, 8 runs |
+| `analyse_stage_mh.py`, `make_stage_mh_csv.py` | the Stage MH analysis and sweep, including its distortion check |
 | `analyse_stage_l.py` sections 2-5 | the per-run figures behind sections 5-10 |
 
 Per-run evidence kept on the runs' host under `results/run_logs/<run id>/`:
