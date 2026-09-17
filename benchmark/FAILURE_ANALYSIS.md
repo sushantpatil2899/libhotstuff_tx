@@ -14,8 +14,8 @@ Phase 3 of the study. Measurement conventions and baselines are those of
 Reservation: CloudLab Utah Exp-3, `d6515` nodes (AMD EPYC 7452, 32 physical
 cores / 64 hardware threads, 125 GB), 4 replicas + 1 client host.
 
-Totals: **454 runs** in three sweeps (Stage L 100, Stage LT 300, Stage M
-54), 0 run errors, 0 parse failures.
+Totals: **469 runs** in four sweeps (Stage L 100, Stage LT 300, Stage M
+54, Stage MB 15), 0 run errors, 0 parse failures.
 
 **Only findings are recorded. No mechanism is proposed for any of them.**
 
@@ -682,8 +682,69 @@ has 8. The two largest gains, bs400 c2 and B2, are the two cells carrying
 the largest quorum-to-QC delay. B2 is not unique after all -- it is the
 second-worst case of a pattern, and bs400 c2 is a stronger one.
 
-**No cause is established** for the delay, for its dependence on client
-count, or for why removing a replica reduces it.
+**Cause of the delay: see 15.5.** Its dependence on client count, and why
+removing a replica reduces it, are not established.
+
+### 15.5 Stage MB -- the delay is the leader waiting for a full block
+
+15 runs, protocol logging on, 0 errors. The build adds one protocol-log
+line at the moment the leader has a full block of commands ready ("beat:
+block of N ready", `src/hotstuff.cpp`). It compiles to nothing without
+protocol logging, so no earlier result is affected.
+
+Beats queue: each adds one full block, and each proposal carrying
+commands takes one off. For every block, the analysis records whether a
+full block was already queued at the moment its 2f+1'th vote arrived.
+**Model check: in 191,781 blocks, not once did a beat recorded as
+arriving after the quorum carry a timestamp before it.**
+
+Two predictions were written into `make_stage_mb_csv.py` before any run,
+and either could have refuted the explanation.
+
+**P1 -- confirmed.** Every delay over 0.1 ms happened with no full block
+queued; with one queued, the gap is the 0.02 ms that B1, B3 and B4 show
+always; and the "got QC" line follows the beat by 0.01 ms.
+
+| configuration | replicas | blocks with no full block queued at quorum | of gaps over 0.1 ms, none queued | gap when one was queued | gap when none was |
+|---|---|---|---|---|---|
+| bs400 c2 | 4 | 90.2% | **100.0%** | 0.02 ms | 0.88 ms |
+| bs400 c2 | 3 | 90.1% | **100.0%** | 0.03 ms | 0.41 ms |
+| **bs800 c4 (B2)** | 4 | **81.4%** | **100.0%** | 0.02 ms | 0.50 ms |
+| **bs800 c4 (B2)** | 3 | **11.7%** | **99.9%** | 0.02 ms | 0.14 ms |
+| bs800 c8 | 4 | 0.0% | -- (no gaps) | 0.02 ms | -- |
+| bs800 c8 | 3 | 0.0% | -- (no gaps) | 0.02 ms | -- |
+
+So the segment called "QC formed" in sections 14 and 15 is, whenever it
+is long, **the leader holding a completed quorum and waiting for enough
+client commands to fill the next block.** At B2 that is 81.4% of blocks
+with four replicas and 11.7% with three.
+
+**P2 -- only partly holds.** Raising `max_async` at bs400 c2 was
+predicted to keep a full block queued and remove the delay:
+
+| bs400 c2, four replicas | median gap | blocks with none queued | gap when none was |
+|---|---|---|---|
+| `max_async` 1,000 | 0.82 ms | 90.2% | 0.88 ms |
+| `max_async` 2,000 | 0.02-0.03 ms | 37.9-38.3% | 1.77-1.91 ms |
+| `max_async` 4,000 | 0.04-0.05 ms | 48.9-51.3% | 1.20-1.40 ms |
+
+The median gap falls to 0.02-0.05 ms, but the leader still has no full
+block queued at 38-51% of quorums, and those waits are longer. More
+outstanding commands make the wait rarer, not absent, and 4,000 is not
+better than 2,000. The strong form of P2 is refuted.
+
+The "left in buffer" figure on the beat line is 0 in 100% of beats in
+every cell. That is by construction -- the leader takes a block the
+moment the buffer reaches exactly `blk_size` -- so it carries no
+information and is not used.
+
+**Established:** the extra per-block time at B2, and at bs400 c2, is
+command starvation at the leader, measured per block.
+
+**Not established:** why losing a replica makes starvation so much rarer
+at B2 (81.4% -> 11.7%) but not at bs400 c2 (90.2% -> 90.1%, where it
+only shortens each wait), and why raising `max_async` leaves it at
+38-51%.
 
 ---
 
@@ -691,12 +752,11 @@ count, or for why removing a replica reduces it.
 
 Recorded, with no mechanism proposed for any of them:
 
-- **What the quorum-to-QC delay is** (sections 14 and 15): a wait on a
-  share of blocks, worst with few clients, unaffected by worker threads
-  or burst size, and reduced by removing a replica. B2 is the
-  second-worst case measured; bs400 c2 is worse.
-- **Why the number of clients governs it**, when blocks are full in every
-  configuration and no thread is saturated.
+- **Why losing a replica makes the leader starve so much less often at
+  B2** (81.4% -> 11.7% of blocks) but not at bs400 c2 (90.2% -> 90.1%),
+  now that the delay is established as command starvation (15.5).
+- **Why raising `max_async` leaves the leader starved at 38-51% of
+  quorums** at bs400 c2 rather than removing it.
 - **Why one block is lost at B1 and B4 but not B2 and B3** (section 13),
   and how much of the leader-failure throughput drop that accounts for.
 - **Why 17 leader-failure runs never recovered**, and why they cluster at
@@ -722,6 +782,8 @@ Recorded, with no mechanism proposed for any of them:
 | `benchmark/fail_inject.sh` | the injector |
 | `results/stage_m_results.csv` | Stage M, 54 runs |
 | `analyse_stage_m.py`, `make_stage_m_csv.py` | the Stage M analysis and sweep |
+| `results/stage_mb_results.csv`, `results/stage_mb_analysis.txt` | Stage MB, 15 runs |
+| `analyse_stage_mb.py`, `make_stage_mb_csv.py` | the Stage MB analysis, and the sweep with its predictions |
 | `analyse_stage_l.py` sections 2-5 | the per-run figures behind sections 5-10 |
 
 Per-run evidence kept on the runs' host under `results/run_logs/<run id>/`:
