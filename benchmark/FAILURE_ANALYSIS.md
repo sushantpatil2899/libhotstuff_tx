@@ -14,8 +14,8 @@ Phase 3 of the study. Measurement conventions and baselines are those of
 Reservation: CloudLab Utah Exp-3, `d6515` nodes (AMD EPYC 7452, 32 physical
 cores / 64 hardware threads, 125 GB), 4 replicas + 1 client host.
 
-Totals: **469 runs** in four sweeps (Stage L 100, Stage LT 300, Stage M
-54, Stage MB 15), 0 run errors, 0 parse failures.
+Totals: **481 runs** in five sweeps (Stage L 100, Stage LT 300, Stage M
+54, Stage MB 15, Stage MS 12), 0 run errors, 0 parse failures.
 
 **Only findings are recorded. No mechanism is proposed for any of them.**
 
@@ -746,17 +746,86 @@ at B2 (81.4% -> 11.7%) but not at bs400 c2 (90.2% -> 90.1%, where it
 only shortens each wait), and why raising `max_async` leaves it at
 38-51%.
 
+### 15.6 Stage MS -- the clients are what starve the leader
+
+In Stage MB every client process at B2 and bs400 c2 had a thread at 96-99%
+of a core, with four replicas and with three, and at `max_async` 2,000 and
+4,000. In bs800 c8, which never starves, client threads ran at 65-84%.
+The pipeline was not the difference: depth is 3 blocks in every cell, with
+four replicas and with three, and the second confirmation arrives ~1.3 ms
+sooner after a replica loss at both B2 and bs400 c2 alike.
+
+Stage MS (12 runs, 0 errors, follower 3 killed at 40 s, protocol logging
+on) changed **only client capacity**: the same requests in flight and the
+same block size, split across twice the client processes by halving
+`max_async`. The original cells ran again in the same sweep. Model check
+0 inconsistencies.
+
+| cell | clients x max_async | replicas | throughput | change on replica loss | leader starved | busiest client threads, % of a core |
+|---|---|---|---|---|---|---|
+| bs800 (B2) | 4 x 1,000 | 4 | 303,602 | | 85.4% | 98 97 97 95 |
+| | | 3 | 363,110 | **+19.6%** | 8.0% | 98 96 96 95 |
+| bs800 split | 8 x 500 | 4 | **366,178** | | **36.1%** | 89 87 86 86 85 84 83 82 |
+| | | 3 | 368,085 | **+0.5%** | 1.0% | 78 78 76 74 74 73 72 69 |
+| bs400 | 2 x 1,000 | 4 | 161,429 | | 85.5% | 98 98 |
+| | | 3 | 202,586 | **+25.5%** | 89.1% | 99 98 |
+| bs400 split | 4 x 500 | 4 | **264,308** | | **18.2%** | 96 96 96 94 |
+| | | 3 | 268,196 | **+1.5%** | 0.3% | 85 85 84 81 |
+
+Against the predictions written into `make_stage_ms_csv.py` before any
+run:
+
+**P3 -- the starvation and throughput parts hold; the thread part holds
+only at bs800.** Splitting the same load across twice the clients cut
+leader starvation from 85.4% to 36.1% (bs800) and from 85.5% to 18.2%
+(bs400), and raised four-replica throughput by **+20.6%** (303,602 ->
+366,178) and **+63.7%** (161,429 -> 264,308). The busiest client threads
+fell to 82-89% at bs800, but stayed at 94-96% at bs400: there, the split
+doubled the number of saturated threads rather than unsaturating them,
+and throughput still rose 64%. What changed in both is total client
+capacity; per-thread saturation alone is not the test.
+
+**P4 -- holds.** With the clients split, losing a replica no longer raises
+throughput: +19.6% becomes +0.5%, and +25.5% becomes +1.5%.
+
+In the B2 cell, losing a replica left the busiest client threads where
+they were (98 97 97 95 -> 98 96 96 95) while throughput rose 19.6%, so
+each committed transaction cost the clients less CPU. The client sends
+every command to every live replica and handles a reply from each
+(`examples/hotstuff_client.cpp`, `try_send` and
+`client_resp_cmd_handler`), so its per-transaction network work scales
+with the number of replicas; how much of the saving that accounts for is
+not measured.
+
+**Established:**
+
+1. At B2 and bs400 c2 the leader's per-block wait is command starvation
+   (15.5), and the starvation comes from client capacity: the same load
+   from twice the client processes removes most of it and raises
+   throughput 21-64%.
+2. **B2 runs faster after a replica failure only because its clients are
+   the limit.** Given enough client capacity, the replica-loss gain is
+   gone (+0.5%, +1.5%). This answers the question raised after Stage L.
+3. **B2's normal throughput is bounded by its clients, not by HotStuff.**
+   The same 4,000 requests in flight from 8 client processes give
+   366,178 tx/s against 303,602 from 4. Any B2 figure in this study
+   measures the client configuration as much as the protocol.
+
+**Not established:** whether B1 (2 clients, block 200) is also
+client-bound -- it did not starve in Stage M and was not tested here.
+
 ---
 
 ## 16. Open questions
 
 Recorded, with no mechanism proposed for any of them:
 
-- **Why losing a replica makes the leader starve so much less often at
-  B2** (81.4% -> 11.7% of blocks) but not at bs400 c2 (90.2% -> 90.1%),
-  now that the delay is established as command starvation (15.5).
-- **Why raising `max_async` leaves the leader starved at 38-51% of
-  quorums** at bs400 c2 rather than removing it.
+- **Whether B1 is also client-bound**, as B2 is (15.6).
+- **Why losing a replica cuts starvation frequency at B2** (85% -> 8%) but
+  at bs400 c2 only shortens each wait (85% -> 89%, gap 0.92 -> 0.40 ms),
+  when both are client-limited and both gain throughput.
+- **Why B2 is faster after a failure -- answered (15.6):** its clients are
+  the limit; with enough client capacity the gain is +0.5%.
 - **Why one block is lost at B1 and B4 but not B2 and B3** (section 13),
   and how much of the leader-failure throughput drop that accounts for.
 - **Why 17 leader-failure runs never recovered**, and why they cluster at
@@ -784,6 +853,8 @@ Recorded, with no mechanism proposed for any of them:
 | `analyse_stage_m.py`, `make_stage_m_csv.py` | the Stage M analysis and sweep |
 | `results/stage_mb_results.csv`, `results/stage_mb_analysis.txt` | Stage MB, 15 runs |
 | `analyse_stage_mb.py`, `make_stage_mb_csv.py` | the Stage MB analysis, and the sweep with its predictions |
+| `results/stage_ms_results.csv`, `results/stage_ms_analysis.txt` | Stage MS, 12 runs |
+| `analyse_stage_ms.py`, `make_stage_ms_csv.py` | the Stage MS analysis, and the sweep with its predictions |
 | `analyse_stage_l.py` sections 2-5 | the per-run figures behind sections 5-10 |
 
 Per-run evidence kept on the runs' host under `results/run_logs/<run id>/`:
