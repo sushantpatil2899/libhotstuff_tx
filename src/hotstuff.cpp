@@ -403,30 +403,9 @@ void HotStuffBase::do_consensus(const block_t &blk) {
 void HotStuffBase::do_decide(Finality &&fin) {
     part_decided++;
     state_machine_execute(fin);
-#ifdef HOTSTUFF_ENABLE_LOG_PROTO
-    /* One line per decided block: how many of its commands this replica
-       answered. A replica answers only commands still in its own
-       decision_waiting, so a command answered by fewer than f+1 replicas
-       leaves its client waiting. Commands of a block are decided in order
-       from cmd_idx 0, so a new block flushes the previous one. */
-    if (fin.cmd_idx == 0)
-    {
-        if (decided_n)
-            HOTSTUFF_LOG_PROTO("decided block %s height %u: %zu cmds, %zu answered",
-                               get_hex10(decided_blk).c_str(), decided_height,
-                               decided_n, decided_answered);
-        decided_blk = fin.blk_hash;
-        decided_height = fin.cmd_height;
-        decided_n = decided_answered = 0;
-    }
-    decided_n++;
-#endif
     auto it = decision_waiting.find(fin.cmd_hash);
     if (it != decision_waiting.end())
     {
-#ifdef HOTSTUFF_ENABLE_LOG_PROTO
-        decided_answered++;
-#endif
         it->second(std::move(fin));
         decision_waiting.erase(it);
     }
@@ -484,11 +463,6 @@ void HotStuffBase::start(
                     cmds.push_back(cmd_pending_buffer.front());
                     cmd_pending_buffer.pop();
                 }
-                /* The moment a full block of commands is ready. The
-                   pacemaker proposes at the later of this and the previous
-                   block's QC, so this line separates the two. */
-                HOTSTUFF_LOG_PROTO("beat: block of %zu ready, %zu left in buffer",
-                                   blk_size, cmd_pending_buffer.size());
                 pmaker->beat().then([this, cmds = std::move(cmds)](ReplicaID proposer) {
                     if (proposer == get_id()){
                         HOTSTUFF_LOG_DEBUG("[[cmd_pending.reg_handler]] [R-%d] [L-%d] pacemaker beat done", get_id(), proposer);

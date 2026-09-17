@@ -234,36 +234,6 @@ int main(int argc, char **argv) {
        truncating at ~416k records (~21.6MB) regardless of workload,
        which made n_committed a prefix and tps a rate over only the first
        few seconds. These aggregates are O(n) and always survive. */
-    /* Commands not yet confirmed by f+1 replicas, by age. In a closed loop
-       every max_async slot is normally occupied at shutdown, so the total
-       says nothing; what matters is how many have waited far longer than
-       any normal latency. The client does not re-send, so a command stuck
-       since a failure holds its slot until shutdown. */
-    {
-        struct timeval now;
-        gettimeofday(&now, nullptr);
-        double now_off = (now.tv_sec - run_start.tv_sec) +
-                         (now.tv_usec - run_start.tv_usec) * 1e-6;
-        size_t over1 = 0;
-        /* send time, in seconds from run_start, of each command waiting
-           more than 10 s */
-        std::vector<double> stuck_sent;
-        for (auto &p: waiting)
-        {
-            p.second.et.stop();
-            double age = p.second.et.elapsed_sec;
-            if (age > 1) over1++;
-            if (age > 10) stuck_sent.push_back(now_off - age);
-        }
-        std::sort(stuck_sent.begin(), stuck_sent.end());
-        fprintf(stderr, "[hotstuff waiting] n=%zu over1s=%zu over10s=%zu sent=%u "
-                "stuck_sent_min=%.3f stuck_sent_med=%.3f stuck_sent_max=%.3f\n",
-                waiting.size(), over1, stuck_sent.size(), cnt,
-                stuck_sent.empty() ? -1.0 : stuck_sent.front(),
-                stuck_sent.empty() ? -1.0 : stuck_sent[stuck_sent.size() / 2],
-                stuck_sent.empty() ? -1.0 : stuck_sent.back());
-        fflush(stderr);
-    }
     if (!elapsed.empty())
     {
         double first = elapsed.front().first.tv_sec +

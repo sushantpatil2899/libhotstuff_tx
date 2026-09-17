@@ -1,0 +1,220 @@
+=== MF_B1_lead_crash_r1  stuck >10 s 0  >1 s 0 (clients reporting 2/2)  inferred 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+=== MF_B1_lead_crash_r2  stuck >10 s 200  >1 s 200 (clients reporting 2/2)  inferred 201
+      client: 146 stuck, sent at run +52.085 / +52.086 / +52.086 s (min / median / max)
+      client: 54 stuck, sent at run +52.042 / +52.043 / +52.043 s (min / median / max)
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r3 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+       +12.02s r2 reproposing pending commands
+      block c88db18b93 h=31691 first decided  +12.02s  cmds 412  answered r0:- r1:200 r2:412 r3:412
+=== MF_B1_lead_crash_r3  stuck >10 s 0  >1 s 0 (clients reporting 2/2)  inferred 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+       +11.01s r3 Pacemaker: rotate to 2
+       +12.01s r2 reproposing pending commands
+      block fee9b3087e h=32908 first decided  +12.02s  cmds 400  answered r0:- r1:200 r2:400 r3:400
+=== MF_B1_lead_freeze_r1  stuck >10 s 200  >1 s 200 (clients reporting 2/2)  inferred 201
+      client: 200 stuck, sent at run +52.041 / +52.041 / +52.042 s (min / median / max)
+        +5.00s r1 Pacemaker: rotate to 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+       +11.01s r3 Pacemaker: rotate to 2
+       +12.02s r2 reproposing pending commands
+      block 22d94dc2c8 h=32418 first decided  +12.03s  cmds 240  answered r0:- r1:200 r2:240 r3:240
+=== MF_B1_lead_freeze_r2  stuck >10 s 200  >1 s 200 (clients reporting 2/2)  inferred 201
+      client: 88 stuck, sent at run +52.093 / +52.093 / +52.093 s (min / median / max)
+      client: 112 stuck, sent at run +52.049 / +52.049 / +52.050 s (min / median / max)
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +5.01s r3 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r2 Pacemaker: rotate to 2
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r3 Pacemaker: rotate to 2
+       +12.02s r2 reproposing pending commands
+      block b47c3635f5 h=32147 first decided  +12.03s  cmds 400  answered r0:- r1:0 r2:400 r3:400
+=== MF_B1_lead_freeze_r3  stuck >10 s 200  >1 s 200 (clients reporting 2/2)  inferred 201
+      client: 57 stuck, sent at run +52.094 / +52.094 / +52.094 s (min / median / max)
+      client: 143 stuck, sent at run +52.049 / +52.050 / +52.051 s (min / median / max)
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.01s r1 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+       +11.02s r3 Pacemaker: rotate to 2
+       +12.02s r2 reproposing pending commands
+      block 635d141dfc h=32629 first decided  +12.03s  cmds 752  answered r0:- r1:0 r2:752 r3:424
+=== MF_B2_lead_crash_r1  stuck >10 s 0  >1 s 0 (clients reporting 4/4)  inferred 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r3 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+      block 246bcb4d50 h=34820 first decided  +63.62s  cmds 800  answered r0:- r1:800 r2:800 r3:795
+      block 0eb5a6819b h=36071 first decided  +66.83s  cmds 800  answered r0:- r1:800 r2:800 r3:709
+      block 27822371c9 h=36081 first decided  +66.86s  cmds 800  answered r0:- r1:800 r2:800 r3:720
+=== MF_B2_lead_crash_r2  stuck >10 s 0  >1 s 0 (clients reporting 4/4)  inferred 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r3 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+       +12.02s r2 reproposing pending commands
+       +17.02s r2 Pacemaker: rotate to 3
+       +17.02s r1 Pacemaker: rotate to 3
+       +17.02s r3 Pacemaker: rotate to 3
+       +18.03s r3 reproposing pending commands
+       +23.02s r3 Pacemaker: rotate to 0
+       +23.03s r2 Pacemaker: rotate to 0
+       +23.03s r1 Pacemaker: rotate to 0
+       +25.03s r3 Pacemaker: rotate to 1
+       +25.03s r2 Pacemaker: rotate to 1
+       +25.03s r1 Pacemaker: rotate to 1
+=== MF_B2_lead_crash_r3  stuck >10 s 0  >1 s 0 (clients reporting 4/4)  inferred 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r3 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+=== MF_B2_lead_freeze_r1  stuck >10 s 0  >1 s 0 (clients reporting 4/4)  inferred 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+=== MF_B2_lead_freeze_r2  stuck >10 s 0  >1 s 0 (clients reporting 4/4)  inferred 2
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r3 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+      block e52246a4c8 h=15266 first decided  +12.02s  cmds 800  answered r0:- r1:783 r2:783 r3:783
+=== MF_B2_lead_freeze_r3  stuck >10 s 0  >1 s 0 (clients reporting 4/4)  inferred 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+       +11.02s r3 Pacemaker: rotate to 2
+      block cba692a98d h=15406 first decided  +12.02s  cmds 800  answered r0:- r1:646 r2:646 r3:646
+=== MF_B4_lead_crash_r1  stuck >10 s 3,200  >1 s 3,200 (clients reporting 8/8)  inferred 3,203
+      client: 525 stuck, sent at run +52.399 / +52.402 / +52.404 s (min / median / max)
+      client: 371 stuck, sent at run +52.354 / +52.356 / +52.359 s (min / median / max)
+      client: 376 stuck, sent at run +52.310 / +52.312 / +52.314 s (min / median / max)
+      client: 467 stuck, sent at run +52.265 / +52.268 / +52.271 s (min / median / max)
+      client: 316 stuck, sent at run +52.218 / +52.219 / +52.222 s (min / median / max)
+      client: 391 stuck, sent at run +52.175 / +52.178 / +52.180 s (min / median / max)
+      client: 428 stuck, sent at run +52.129 / +52.131 / +52.134 s (min / median / max)
+      client: 326 stuck, sent at run +52.066 / +52.068 / +52.069 s (min / median / max)
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +6.02s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.02s r2 Pacemaker: rotate to 2
+       +11.02s r3 Pacemaker: rotate to 2
+       +12.05s r2 reproposing pending commands
+      block 70559370a9 h=4985 first decided  +12.11s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:3024
+=== MF_B4_lead_crash_r2  stuck >10 s 3,200  >1 s 3,200 (clients reporting 8/8)  inferred 3,199
+      client: 209 stuck, sent at run +52.389 / +52.390 / +52.391 s (min / median / max)
+      client: 320 stuck, sent at run +52.344 / +52.347 / +52.348 s (min / median / max)
+      client: 414 stuck, sent at run +52.298 / +52.300 / +52.302 s (min / median / max)
+      client: 467 stuck, sent at run +52.254 / +52.256 / +52.259 s (min / median / max)
+      client: 368 stuck, sent at run +52.206 / +52.207 / +52.208 s (min / median / max)
+      client: 468 stuck, sent at run +52.153 / +52.156 / +52.159 s (min / median / max)
+      client: 334 stuck, sent at run +52.112 / +52.115 / +52.117 s (min / median / max)
+      client: 620 stuck, sent at run +52.053 / +52.058 / +52.063 s (min / median / max)
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.01s r2 Pacemaker: rotate to 2
+       +11.01s r3 Pacemaker: rotate to 2
+       +12.04s r2 reproposing pending commands
+=== MF_B4_lead_crash_r3  stuck >10 s 0  >1 s 0 (clients reporting 8/8)  inferred 5
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.02s r2 Pacemaker: rotate to 2
+       +11.02s r3 Pacemaker: rotate to 2
+      block 53d132c25f h=5253 first decided  +12.10s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:2355
+      block 965ec99ed0 h=5254 first decided  +12.11s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:2809
+      block 76ccd007be h=5255 first decided  +12.12s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:2754
+=== MF_B4_lead_freeze_r1  stuck >10 s 3,200  >1 s 3,200 (clients reporting 8/8)  inferred 3,202
+      client: 302 stuck, sent at run +52.391 / +52.394 / +52.397 s (min / median / max)
+      client: 620 stuck, sent at run +52.344 / +52.346 / +52.350 s (min / median / max)
+      client: 525 stuck, sent at run +52.301 / +52.303 / +52.308 s (min / median / max)
+      client: 158 stuck, sent at run +52.256 / +52.256 / +52.257 s (min / median / max)
+      client: 507 stuck, sent at run +52.207 / +52.210 / +52.213 s (min / median / max)
+      client: 247 stuck, sent at run +52.161 / +52.162 / +52.163 s (min / median / max)
+      client: 293 stuck, sent at run +52.120 / +52.122 / +52.124 s (min / median / max)
+      client: 548 stuck, sent at run +52.063 / +52.067 / +52.072 s (min / median / max)
+        +5.00s r2 Pacemaker: rotate to 1
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.02s r2 Pacemaker: rotate to 2
+       +11.02s r3 Pacemaker: rotate to 2
+       +12.05s r2 reproposing pending commands
+      block aa3bf83684 h=5085 first decided  +12.05s  cmds 3,200  answered r0:- r1:3150 r2:3150 r3:3150
+      block 0c867dab8e h=5091 first decided  +12.09s  cmds 4,202  answered r0:- r1:3200 r2:4202 r3:4202
+=== MF_B4_lead_freeze_r2  stuck >10 s 0  >1 s 0 (clients reporting 8/8)  inferred 1
+        +5.01s r2 Pacemaker: rotate to 1
+        +5.01s r1 Pacemaker: rotate to 1
+        +5.01s r3 Pacemaker: rotate to 1
+        +6.02s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.02s r2 Pacemaker: rotate to 2
+       +11.02s r3 Pacemaker: rotate to 2
+      block c425907884 h=5260 first decided  +12.11s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:2367
+      block 5ab6b8ba02 h=5261 first decided  +12.12s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:2293
+      block ac78fa88ef h=5262 first decided  +12.12s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:2027
+      block 4c566e5dc1 h=5263 first decided  +12.13s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:1662
+      block d1a56f982a h=5264 first decided  +12.14s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:2827
+      block 3eacaff4cc h=5265 first decided  +12.15s  cmds 3,200  answered r0:- r1:3200 r2:3200 r3:2709
+=== MF_B4_lead_freeze_r3  stuck >10 s 3,200  >1 s 3,200 (clients reporting 8/8)  inferred 3,202
+      client: 398 stuck, sent at run +52.394 / +52.396 / +52.397 s (min / median / max)
+      client: 512 stuck, sent at run +52.344 / +52.349 / +52.351 s (min / median / max)
+      client: 528 stuck, sent at run +52.296 / +52.298 / +52.301 s (min / median / max)
+      client: 507 stuck, sent at run +52.256 / +52.259 / +52.262 s (min / median / max)
+      client: 176 stuck, sent at run +52.210 / +52.212 / +52.213 s (min / median / max)
+      client: 481 stuck, sent at run +52.164 / +52.165 / +52.172 s (min / median / max)
+      client: 262 stuck, sent at run +52.123 / +52.125 / +52.126 s (min / median / max)
+      client: 336 stuck, sent at run +52.055 / +52.056 / +52.061 s (min / median / max)
+        +5.00s r3 Pacemaker: rotate to 1
+        +5.00s r1 Pacemaker: rotate to 1
+        +5.00s r2 Pacemaker: rotate to 1
+        +6.01s r1 reproposing pending commands
+       +11.01s r1 Pacemaker: rotate to 2
+       +11.02s r2 Pacemaker: rotate to 2
+       +11.02s r3 Pacemaker: rotate to 2
+       +12.04s r2 reproposing pending commands
+      block 1fa44b849a h=5247 first decided  +12.04s  cmds 3,200  answered r0:- r1:878 r2:878 r3:878

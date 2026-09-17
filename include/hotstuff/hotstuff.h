@@ -161,13 +161,6 @@ class HotStuffBase: public HotStuffCore {
     using cmd_queue_t = salticidae::MPSCQueueEventDriven<std::pair<uint256_t, commit_cb_t>>;
     cmd_queue_t cmd_pending;
     std::queue<uint256_t> cmd_pending_buffer;
-#ifdef HOTSTUFF_ENABLE_LOG_PROTO
-    /* per-block decide statistics for the protocol log (do_decide) */
-    uint256_t decided_blk;
-    uint32_t decided_height = 0;
-    size_t decided_n = 0;
-    size_t decided_answered = 0;
-#endif
 
     /* statistics */
     uint64_t fetched;

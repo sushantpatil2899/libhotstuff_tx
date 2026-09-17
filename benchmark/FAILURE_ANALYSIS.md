@@ -14,8 +14,9 @@ Phase 3 of the study. Measurement conventions and baselines are those of
 Reservation: CloudLab Utah Exp-3, `d6515` nodes (AMD EPYC 7452, 32 physical
 cores / 64 hardware threads, 125 GB), 4 replicas + 1 client host.
 
-Totals: **481 runs** in five sweeps (Stage L 100, Stage LT 300, Stage M
-54, Stage MB 15, Stage MS 12), 0 run errors, 0 parse failures.
+Totals: **499 runs** in six sweeps (Stage L 100, Stage LT 300, Stage M
+54, Stage MB 15, Stage MS 12, Stage MF 18), 0 run errors, 0 parse
+failures.
 
 **Only findings are recorded. No mechanism is proposed for any of them.**
 
@@ -687,10 +688,11 @@ removing a replica reduces it, are not established.
 
 ### 15.5 Stage MB -- the delay is the leader waiting for a full block
 
-15 runs, protocol logging on, 0 errors. The build adds one protocol-log
-line at the moment the leader has a full block of commands ready ("beat:
-block of N ready", `src/hotstuff.cpp`). It compiles to nothing without
-protocol logging, so no earlier result is affected.
+15 runs, protocol logging on, 0 errors. These runs used a **temporary
+diagnostic build** that adds one protocol-log line at the moment the
+leader has a full block of commands ready ("beat: block of N ready"). It
+changes no logic, compiles to nothing without protocol logging, and has
+been removed from the code (note at the end of section 15).
 
 Beats queue: each adds one full block, and each proposal carrying
 commands takes one off. For every block, the analysis records whether a
@@ -820,16 +822,73 @@ questions those phases answer. The finding stands as a property of B2 to
 keep in mind when reading any B2 figure. B1 did not starve in Stage M
 (0.02 ms, ~0% of blocks), but its client threads were not examined.
 
+### 15.7 Stage MF -- when the lost block is sent
+
+18 runs, 0 errors: Stage LT at 5 s impeachment timeout, leader failure at
+40 s, protocol logging on, on a **temporary diagnostic build**, since removed (note below), that adds
+two measurements without changing any logic -- each replica logs, per
+decided block, how many of its commands it answered, and each client
+reports at shutdown the commands it has waited on for more than 10 s, with
+their send times. (In a closed loop every `max_async` slot is occupied at
+shutdown, so only the age identifies a stuck command.) Send times below are
+from each client's own start, placed against the injection time T.
+
+| run | stuck commands | sent | second leader's "reproposing pending commands" |
+|---|---|---|---|
+| B1 crash r1 | 0 | -- | none |
+| B1 crash r2 | **200** | T+12.017 .. 12.018 s | T+12.016 s |
+| B1 crash r3 | 0 | -- | T+12.013 s |
+| B1 freeze r1 | **200** | T+12.020 .. 12.021 s | T+12.018 s |
+| B1 freeze r2 | **200** | T+12.023 .. 12.024 s | T+12.021 s |
+| B1 freeze r3 | **200** | T+12.023 .. 12.025 s | T+12.022 s |
+| B2, all 6 runs | 0 | -- | one run (crash r2, T+12.017 s); none in the other five |
+| B4 crash r1 | **3,200** | T+12.055 .. 12.061 s | T+12.052 s |
+| B4 crash r2 | **3,200** | T+12.044 .. 12.054 s | T+12.043 s |
+| B4 crash r3 | 0 | -- | none |
+| B4 freeze r1 | **3,200** | T+12.051 .. 12.060 s | T+12.048 s |
+| B4 freeze r2 | 0 | -- | none |
+| B4 freeze r3 | **3,200** | T+12.045 .. 12.057 s | T+12.044 s |
+
+1. **The clients' own count confirms section 13.** In all 8 runs that lost
+   work, the stuck count is exactly one block (200 at B1, 3,200 at B4) and
+   matches the throughput x latency estimate within 3 commands.
+2. **The lost block is not work in flight when the leader failed.** It is
+   sent 1-4 ms after the second new leader (replica 2) logs "reproposing
+   pending commands", at T+12.02-12.06 s, and across all 8 clients at B4
+   within 13 ms. The send and log times come from different hosts' clocks;
+   the order was the same in all 8 runs.
+3. **Loss occurred only in runs with that second re-proposal:** 8 of the
+   10 runs that had one, 0 of the 8 that did not.
+4. **None of the stuck commands appears in any block a surviving replica
+   decided.** Every decided block after the failure was answered by at
+   least two survivors for every command.
+
+**Not established:** what happens at the replicas to commands arriving in
+those few milliseconds after the re-proposal starts; why 2 of the 10 runs
+with a second re-proposal lost nothing; and why B2 reaches a second
+re-proposal in only 1 of 6 runs.
+
+> **Diagnostic builds (recorded 2026-09-17).** Stages MB, MS and MF ran on
+> builds with temporary, purely additive diagnostics in the protocol code:
+> the beat log line (commit `5a9b1fc`), per-block answered counts and a
+> client stuck count (`153d585`), and stuck-command ages and send times
+> (`a275a53`) -- 63 lines added, 0 lines changed. They were committed and
+> pushed before the rule that diagnostics stay uncommitted, and have since
+> been removed: `src/hotstuff.cpp`, `include/hotstuff/hotstuff.h` and
+> `examples/hotstuff_client.cpp` are back to their state before `5a9b1fc`.
+> Any later diagnostic is applied to the build hosts uncommitted and
+> removed after the run.
+
 ---
 
 ## 16. Open questions
 
 Recorded, with no mechanism proposed for any of them:
 
-- **Why one block is lost at B1 and B4 but never at B2 and B3** (section
-  13), and why at B1 only under a freeze. The lost block costs no
-  throughput (15.1); what remains is that those transactions are never
-  committed.
+- **What happens to commands sent in the few milliseconds after the second
+  leader starts re-proposing** (15.7). Those are the lost block; they
+  appear in no block the survivors decide. Loss needs that second
+  re-proposal (8 of 10 runs with one, 0 of 8 without).
 - **Why 17 leader-failure runs never recovered**, and why they cluster at
   B3 and B4 crash.
 - **Why the replicas usually rotate twice**, and why the second rotation
