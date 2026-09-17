@@ -811,8 +811,14 @@ not measured.
    366,178 tx/s against 303,602 from 4. Any B2 figure in this study
    measures the client configuration as much as the protocol.
 
-**Not established:** whether B1 (2 clients, block 200) is also
-client-bound -- it did not starve in Stage M and was not tested here.
+**Decided, not pursued (2026-09-17).** B2 is **not redefined**, and B1 is
+**not tested** for the same property. The network-delay
+(`BASELINE_ANALYSIS.md` 12-14), compute (`COMPUTE_ANALYSIS.md`) and failure
+phases were all run on the existing baselines; redefining B2 now would
+break comparability with every one of them and gain nothing for the
+questions those phases answer. The finding stands as a property of B2 to
+keep in mind when reading any B2 figure. B1 did not starve in Stage M
+(0.02 ms, ~0% of blocks), but its client threads were not examined.
 
 ---
 
@@ -820,21 +826,36 @@ client-bound -- it did not starve in Stage M and was not tested here.
 
 Recorded, with no mechanism proposed for any of them:
 
-- **Whether B1 is also client-bound**, as B2 is (15.6).
-- **Why losing a replica cuts starvation frequency at B2** (85% -> 8%) but
-  at bs400 c2 only shortens each wait (85% -> 89%, gap 0.92 -> 0.40 ms),
-  when both are client-limited and both gain throughput.
-- **Why B2 is faster after a failure -- answered (15.6):** its clients are
-  the limit; with enough client capacity the gain is +0.5%.
-- **Why one block is lost at B1 and B4 but not B2 and B3** (section 13),
-  and how much of the leader-failure throughput drop that accounts for.
+- **Why one block is lost at B1 and B4 but never at B2 and B3** (section
+  13), and why at B1 only under a freeze. The lost block costs no
+  throughput (15.1); what remains is that those transactions are never
+  committed.
 - **Why 17 leader-failure runs never recovered**, and why they cluster at
   B3 and B4 crash.
 - **Why the replicas usually rotate twice**, and why the second rotation
   costs a second outage at B3 and B4 but not at B1 and B2.
 - **Why throughput settles below normal** after a leader failure at B1,
-  B3 and B4 but not at B2 -- at B4 and at B1 under a freeze, part of this
-  is the lost block of section 13, in a proportion not yet established.
+  B3 and B4 but not at B2. It is not the lost block: healthy controls at
+  the same reduced load lose nothing (15.1).
+- **Why losing a replica cuts starvation frequency at B2** (85% -> 8%) but
+  at bs400 c2 only shortens each wait (85% -> 89%, gap 0.92 -> 0.40 ms),
+  when both are client-bound and both gain throughput.
+
+Answered, kept for the record:
+
+- **Why B2 is faster after a failure** (15.6): its clients are the limit.
+  With enough client capacity the gain is +0.5%.
+- **How much of the leader-failure drop the lost block accounts for**
+  (15.1): none.
+
+Decided, not pursued:
+
+- **Client retry.** The client never re-sends a command
+  (`examples/hotstuff_client.cpp`), which is why a lost block stays lost.
+  Adding a retry would introduce a timeout that interacts with the
+  impeachment timeout swept in Stage LT and would need its own sweep, and
+  15.1 shows the lost block does not affect the measured throughput.
+- **Redefining B2, and testing B1 for client saturation** (15.6).
 
 ---
 

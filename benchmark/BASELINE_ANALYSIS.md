@@ -620,6 +620,17 @@ network-latency re-run, start from.
 > Across Stages E-H, B4's
 > configuration stalled in 8 runs.
 
+> **Note (`FAILURE_ANALYSIS.md` section 15.6, recorded 2026-09-17).**
+> **B2 is client-bound.** Its 4 client processes each run a thread at
+> 95-98% of a core, and the leader waits for commands to fill a block at
+> ~85% of quorums. The same 4,000 requests in flight from 8 client
+> processes (8 x 500) give 366,178 tps against 303,602 from 4 (4 x
+> 1,000). B2's figures therefore reflect its client configuration as well
+> as the protocol. **B2 is kept as defined** -- the network-delay, compute
+> and failure phases were all run on these baselines, and redefining B2
+> now would break comparability with them -- and **B1 was not tested** for
+> the same property.
+
 ---
 
 ## 11. Block size extension to 6400 (Stages G and H)
@@ -1292,7 +1303,12 @@ Stage N with the leader relabelled, so that sweep is dropped too.
 **Planned after this document is closed, in order:**
 1. reduced computational capacity on one node -- done, fewer cores only:
    `COMPUTE_ANALYSIS.md`;
-2. failure injection: the leader failing mid-run, then a follower.
+2. failure injection: the leader failing mid-run, then a follower -- done:
+   `FAILURE_ANALYSIS.md`.
+
+**Decided, not pursued: redefining B2.** B2 turned out to be client-bound
+(note in section 10b). It is kept as defined so every phase stays
+comparable, and B1 is not tested for the same property.
 
 ---
 
