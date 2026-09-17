@@ -79,7 +79,8 @@ SUMMARY_FILE = 'summaries.txt'
 # deleted. The steady-state line and histogram are what distinguish a
 # stalled run from a slow one, so they are kept alongside the summary.
 KEEP_MARKERS = ('[hotstuff summary]', '[hotstuff steady]',
-                '[hotstuff buckets]', '[hotstuff latsums]')
+                '[hotstuff buckets]', '[hotstuff latsums]',
+                '[hotstuff waiting]')
 
 
 def _prune_client_logs(run_dir):

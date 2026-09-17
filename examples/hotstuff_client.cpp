@@ -234,6 +234,10 @@ int main(int argc, char **argv) {
        truncating at ~416k records (~21.6MB) regardless of workload,
        which made n_committed a prefix and tps a rate over only the first
        few seconds. These aggregates are O(n) and always survive. */
+    /* Commands sent but never confirmed by f+1 replicas. The client does
+       not re-send, so each one holds a max_async slot until shutdown. */
+    fprintf(stderr, "[hotstuff waiting] n=%zu sent=%u\n", waiting.size(), cnt);
+    fflush(stderr);
     if (!elapsed.empty())
     {
         double first = elapsed.front().first.tv_sec +
