@@ -14,9 +14,9 @@ Phase 3 of the study. Measurement conventions and baselines are those of
 Reservation: CloudLab Utah Exp-3, `d6515` nodes (AMD EPYC 7452, 32 physical
 cores / 64 hardware threads, 125 GB), 4 replicas + 1 client host.
 
-Totals: **513 runs** in eight sweeps (Stage L 100, Stage LT 300, Stage M
-54, Stage MB 15, Stage MS 12, Stage MF 18, Stage MG 6, Stage MH 8), 0 run
-errors, 0 parse failures.
+Totals: **529 runs** in nine sweeps (Stage L 100, Stage LT 300, Stage M
+54, Stage MB 15, Stage MS 12, Stage MF 18, Stage MG 6, Stage MH 8, Stage
+MI 16), 0 run errors, 0 parse failures.
 
 **Only findings are recorded. No mechanism is proposed for any of them.**
 
@@ -983,6 +983,64 @@ re-proposal (9 of 24 B1 crash runs, 3 of 33 B2 runs) were not reproduced
 here, so they are not directly verified -- all 5 losses in this sweep had
 a second re-proposal.
 
+### 15.10 Stage MI -- why there is a second rotation, and a second outage
+
+Section 7 recorded that a leader failure costs one impeachment timeout at
+B1 and B2 and two at B3 and B4. Measured from the Stage L logs, the
+difference is what the **first** new leader does. It either keeps
+proposing for the rest of the run -- no second rotation, no second outage
+-- or it stops within ~15 ms of taking over and is impeached one timeout
+later.
+
+A stalled reign and a healthy one, both at B1, from the replica logs:
+
+| | stalled (L_B1_lead_crash_r1) | kept going (L_B1_lead_crash_r2) |
+|---|---|---|
+| proposals while leading | 10 | 52,331 |
+| its last proposal | T+12.012 s | T+23.999 s |
+| commits during its reign | stop at T+12.007 | resume at T+12.0126 and continue |
+| client commits during its reign | 600 | 10,464,618 |
+
+**It is not a voting failure.** In the stalled runs every block the new
+leader proposed was voted by all three survivors and committed (checked
+per block in `MI_bs200c8_r1`). The leader simply stops proposing: its
+blocks carry commands, they commit, and then no further command arrives
+to fill another block.
+
+**Stage MI: block size or client count?** B1 and B2 differ from B3 and B4
+in both, so 16 runs crossed them at a fixed load, with the prediction
+stated in `make_stage_mi_csv.py` before the sweep (leader crash, 11 s
+timeout, no diagnostic build):
+
+| cell | block size | clients | first leader kept going |
+|---|---|---|---|
+| bs1600 c2 | large | **2** | **3 / 4** |
+| bs200 c2 (B1) | small | **2** | 1 / 4 |
+| bs200 c8 | small | **8** | **0 / 4** |
+| bs3200 c8 (B4) | large | **8** | 0 / 4 |
+
+**Block size does not decide it; the number of client processes does.**
+Large blocks with 2 clients mostly survive, small blocks with 8 clients
+never do. The prediction's block-size branch is refuted.
+
+Over Stages L and MI together, 56 leader-failure runs:
+
+| client processes | runs | first leader kept going |
+|---|---|---|
+| 2 | 18 | 10 (56%) |
+| 4 | 10 | 7 (70%) |
+| 8 | 28 | **0** |
+
+This is the same split as sections 7 and 15.6: the configurations whose
+clients are the limit (2 and 4 processes, `15.6`) are the ones whose first
+new leader survives, and B3 and B4 -- 8 clients, not client-bound -- always
+need a second rotation.
+
+**Not established:** why the number of client processes decides this, when
+per-client outstanding requests and total load do not separate the cases
+(bs200 c2 and bs200 c8 both hold 1,000 per client; bs1600 c2 and bs200 c8
+both hold 8,000 in flight, and they behave oppositely).
+
 > **Diagnostic builds (recorded 2026-09-17).** Stages MB, MS and MF ran on
 > builds with temporary, purely additive diagnostics in the protocol code:
 > the beat log line (commit `5a9b1fc`), per-block answered counts and a
@@ -1007,8 +1065,9 @@ Recorded, with no mechanism proposed for any of them:
   3 of 33 B2 runs in Stages L and LT), which Stage MH did not reproduce.
 - **Why 17 leader-failure runs never recovered**, and why they cluster at
   B3 and B4 crash.
-- **Why the replicas usually rotate twice**, and why the second rotation
-  costs a second outage at B3 and B4 but not at B1 and B2.
+- **Why the number of client processes decides whether the first new
+  leader survives** (15.10): 0 of 28 runs with 8 clients, 17 of 28 with 2
+  or 4.
 - **Why throughput settles below normal** after a leader failure at B1,
   B3 and B4 but not at B2. It is not the lost block: healthy controls at
   the same reduced load lose nothing (15.1).
@@ -1022,6 +1081,11 @@ Answered, kept for the record:
   With enough client capacity the gain is +0.5%.
 - **How much of the leader-failure drop the lost block accounts for**
   (15.1): none.
+- **Why the replicas usually rotate twice, and why B3 and B4 lose a second
+  timeout** (15.10): the first new leader stops proposing within ~15 ms
+  for want of new commands -- not a voting failure -- and is impeached. It
+  survives only where the clients are few; with 8 client processes it
+  never did, in 28 runs.
 - **Where the lost block goes** (15.8, 15.9): commands arriving just after
   a new leader's re-proposal snapshot go only into its buffer, leave the
   buffer to form one full block, and that block's turn to be proposed is
@@ -1062,6 +1126,9 @@ Decided, not pursued:
 | `analyse_stage_mg.py`, `make_stage_mg_csv.py` | the Stage MG analysis and sweep (the diagnostic itself is not in the repo) |
 | `results/stage_mh_results.csv`, `results/stage_mh_analysis.txt` | Stage MH, 8 runs |
 | `analyse_stage_mh.py`, `make_stage_mh_csv.py` | the Stage MH analysis and sweep, including its distortion check |
+| `results/stage_mi_results.csv`, `results/stage_mi_analysis.txt` | Stage MI, 16 runs |
+| `results/stage_l_firstleader.txt` | the same measurement over Stage L's 40 leader-failure runs |
+| `make_stage_mi_csv.py` | the Stage MI sweep and its prediction |
 | `analyse_stage_l.py` sections 2-5 | the per-run figures behind sections 5-10 |
 
 Per-run evidence kept on the runs' host under `results/run_logs/<run id>/`:

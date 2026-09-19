@@ -1,0 +1,16 @@
+MI_bs1600c2_r1           rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals    5 (with commands    1, cmds   3,200)  blocks committed    12  client commits     4,800
+MI_bs1600c2_r2           rot1 T+11.0->r1  rot2   none   reproposal yes  proposals 10164 (with commands 10157, cmds 16,252,800)  blocks committed 30492  client commits 16,250,552
+MI_bs1600c2_r3           rot1 T+11.0->r1  rot2   none   reproposal yes  proposals 9781 (with commands 9774, cmds 15,640,000)  blocks committed 29343  client commits 15,637,195
+MI_bs1600c2_r4           rot1 T+11.0->r1  rot2   none   reproposal yes  proposals 9717 (with commands 9710, cmds 15,537,600)  blocks committed 29151  client commits 15,535,666
+MI_bs200c2_r1            rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals   10 (with commands    3, cmds   1,800)  blocks committed    12  client commits       600
+MI_bs200c2_r2            rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals   10 (with commands    3, cmds   1,800)  blocks committed    12  client commits   136,527
+MI_bs200c2_r3            rot1 T+11.0->r1  rot2   none   reproposal yes  proposals 52039 (with commands 52032, cmds 10,407,600)  blocks committed 156117  client commits 10,406,212
+MI_bs200c2_r4            rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals   11 (with commands    4, cmds   2,000)  blocks committed    12  client commits   138,596
+MI_bs200c8_r1            rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals    8 (with commands    3, cmds   7,800)  blocks committed    12  client commits       600
+MI_bs200c8_r2            rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals    8 (with commands    3, cmds   7,800)  blocks committed    12  client commits       600
+MI_bs200c8_r3            rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals    8 (with commands    3, cmds   7,800)  blocks committed    12  client commits       600
+MI_bs200c8_r4            rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals    8 (with commands    3, cmds   7,800)  blocks committed    12  client commits       600
+MI_bs3200c8_r1           rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals    5 (with commands    1, cmds  23,900)  blocks committed    12  client commits     9,600
+MI_bs3200c8_r2           rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals    8 (with commands    3, cmds  28,800)  blocks committed    12  client commits     9,600
+MI_bs3200c8_r3           rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals    8 (with commands    3, cmds  28,800)  blocks committed    12  client commits     9,600
+MI_bs3200c8_r4           rot1 T+11.0->r1  rot2 T+23.0  reproposal yes  proposals    8 (with commands    3, cmds  28,800)  blocks committed    12  client commits     9,600
