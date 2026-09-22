@@ -527,3 +527,42 @@ fixed window; runs that stopped committing counted separately and excluded
 from the figures; the injected condition verified inside every run; and no
 mechanism written down without a measurement behind it. Where a prediction
 of ours was refuted by the data, the refutation is recorded next to it.
+
+---
+
+## 10. Where the data is (this copy only)
+
+`THE_WHOLE_STORY.md` is the same document without this section.
+
+| phase | runs | sweep definition | full report |
+|---|---|---|---|
+| First attempt (retracted) | 384 + early grids | `netem_factorial.csv` | `INVESTIGATION_RECORD.md` |
+| Measurement rebuild + audit | 29 re-measured | `audit_stalls.py` | `BASELINE_ANALYSIS.md` 13 |
+| Baselines, load, write ratio, threads | 1,445 | `stage_a..h.csv` | `BASELINE_ANALYSIS.md` |
+| Network delay | 340 + 150 | `stage_n/o/p/q.csv` | `BASELINE_ANALYSIS.md` 12-14 |
+| Fewer cores | 750 | `stage_u/k.csv` | `COMPUTE_ANALYSIS.md` |
+| Failures and the three anomalies | 529 | `stage_l/lt/m*.csv` | `FAILURE_ANALYSIS.md` |
+
+**2,795 completed runs** are kept on disk with their logs, across every
+sweep after the rebuild. The first attempt's runs are retained only as the
+record of how it went wrong; its two reports carry retraction notices and
+are superseded by `INVESTIGATION_RECORD.md`.
+
+Per-run evidence kept beside each run's logs: `rtt.json` (the measured
+delay on every replica pair), `compute-*.jsonl` (per-second CPU, allowed
+cores and command lines), `failure-replica-<i>.json` (the injected
+failure and the process state one second later), the replicas' protocol
+logs and the clients' per-second counts.
+
+Section-by-section sources for the figures in this document:
+
+| section | figures come from |
+|---|---|
+| 2, first attempt | `INVESTIGATION_RECORD.md` 1, 2, 3 |
+| 3, baselines and saturation | `BASELINE_ANALYSIS.md` 10, 4 |
+| 4, slow networks | `BASELINE_ANALYSIS.md` 12.2, 12.3 |
+| 5, weak machines | `COMPUTE_ANALYSIS.md` 5, 6 |
+| 6, failures | `FAILURE_ANALYSIS.md` 5, 6, 7 |
+| 7.1, client-bound B2 | `FAILURE_ANALYSIS.md` 15.6 |
+| 7.2, the lost block | `FAILURE_ANALYSIS.md` 13, 15.1, 15.7-15.9 |
+| 7.3, the second outage | `FAILURE_ANALYSIS.md` 15.10 |
